@@ -1,6 +1,6 @@
 # ARKA TECNOLOGIA - Sistema de Gerenciamento de Demandas
 
-Sistema web moderno para gerenciamento de demandas, otimizado para exibição em TVs de 43" ou maiores.
+Sistema para gerenciamento de demandas
 
 ## Stack
 
@@ -11,7 +11,6 @@ Sistema web moderno para gerenciamento de demandas, otimizado para exibição em
 ## Instalação
 
 ```bash
-# Instalar dependências
 npm install
 cd server && npm install
 cd ../client && npm install
@@ -21,7 +20,6 @@ cd ..
 ## Executar
 
 ```bash
-# Desenvolvimento (frontend + backend simultâneos)
 npm run dev
 ```
 
@@ -46,15 +44,3 @@ npm start
 - WebSocket para sincronização em tempo real
 - Exportação CSV, Excel e PDF
 - Sem autenticação (uso interno/TV)
-
-## Identidade Visual
-
-- Fundo: #0A0A0A
-- Azul principal: #0066FF
-- Logo branca
-- Prioridades: Verde (Baixa), Amarelo (Média), Laranja (Alta), Vermelho (Urgente)
-
-## Logo
-
-Substitua `client/public/logo.svg` pela logo oficial da ARKA TECNOLOGIA.
-# ArkaDemandas
