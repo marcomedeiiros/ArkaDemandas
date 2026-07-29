@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { X, ClipboardList, BarChart2, History as HistoryIcon, AlertTriangle, RefreshCw } from 'lucide-react';
 import { useClock } from './hooks/useClock';
 import SplashScreen from './components/splash/SplashScreen';
 import Header from './components/layout/Header';
@@ -18,8 +19,9 @@ export default function App() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDemand, setEditingDemand] = useState<Demand | null>(null);
 
-  const { demands, loading, createDemand, updateDemand, deleteDemand, moveDemand, handleWsMessage } = useDemands();
+  const { demands, loading, error, fetchDemands, createDemand, updateDemand, deleteDemand, moveDemand, handleWsMessage } = useDemands();
   const { stats } = useStats();
+  const clock = useClock();
 
   useWebSocket(handleWsMessage);
 
@@ -51,17 +53,16 @@ export default function App() {
         method: 'POST',
         headers: { 'X-User': 'Sistema' },
       });
-      // WebSocket will update the list
-    } catch (error) {
-      console.error('Error duplicating demand:', error);
+    } catch (err) {
+      console.error('Error duplicating demand:', err);
     }
   }, []);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
       await deleteDemand(id);
-    } catch (error) {
-      console.error('Error deleting demand:', error);
+    } catch (err) {
+      console.error('Error deleting demand:', err);
     }
   }, [deleteDemand]);
 
@@ -70,9 +71,48 @@ export default function App() {
     setEditingDemand(null);
   }, []);
 
+  const handleSplashComplete = useCallback(() => setShowSplash(false), []);
+
   if (showSplash) {
-    return <SplashScreen onComplete={() => setShowSplash(false)} />;
+    return <SplashScreen onComplete={handleSplashComplete} />;
   }
+
+  // ── Tela de erro de conexão ─────────────────────────────────────────────────
+  if (error && demands.length === 0 && !loading) {
+    return (
+      <div className="h-screen flex flex-col items-center justify-center bg-arka-dark gap-6 p-8">
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center"
+          style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)' }}
+        >
+          <AlertTriangle size={32} style={{ color: '#F87171' }} />
+        </div>
+        <div className="text-center">
+          <p className="text-white font-bold text-xl mb-2">Não foi possível conectar ao servidor</p>
+          <p className="text-white/40 text-sm max-w-sm">
+            Verifique se o backend está rodando na porta 3001 e tente novamente.
+          </p>
+          <p
+            className="mt-3 font-mono text-xs px-3 py-1.5 rounded-lg inline-block"
+            style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.3)', border: '1px solid rgba(255,255,255,0.07)' }}
+          >
+            {error}
+          </p>
+        </div>
+        <button
+          onClick={fetchDemands}
+          className="btn-primary flex items-center gap-2"
+          style={{ height: '42px', padding: '0 24px' }}
+        >
+          <RefreshCw size={16} />
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
+  // ── Loading inicial ─────────────────────────────────────────────────────────
+  const showLoading = loading && demands.length === 0;
 
   return (
     <div className={`h-screen flex flex-col bg-arka-dark ${tvMode ? 'tv-mode' : ''}`}>
@@ -114,22 +154,22 @@ export default function App() {
               </div>
             )}
             <div className="text-right">
-              <div className="text-3xl font-bold tabular-nums text-white">{useClock().time}</div>
-              <div className="text-xs text-white/30 capitalize">{useClock().date}</div>
+              <div className="text-3xl font-bold tabular-nums text-white">{clock.time}</div>
+              <div className="text-xs text-white/30 capitalize">{clock.date}</div>
             </div>
             <button
               onClick={() => setTvMode(false)}
               className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white/5 transition-colors"
               style={{ color: 'rgba(255,255,255,0.4)' }}
             >
-              ✕
+              <X size={18} />
             </button>
           </div>
         </div>
       )}
 
       <main className="flex-1 overflow-hidden">
-        {loading && demands.length === 0 ? (
+        {showLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center gap-5">
               <div className="relative w-16 h-16">
@@ -184,9 +224,9 @@ export default function App() {
         }}
       >
         {[
-          { id: 'kanban', label: 'Kanban', emoji: '📋' },
-          { id: 'dashboard', label: 'Dashboard', emoji: '📊' },
-          { id: 'historico', label: 'Histórico', emoji: '🕒' },
+          { id: 'kanban',    label: 'Kanban',    Icon: ClipboardList },
+          { id: 'dashboard', label: 'Dashboard', Icon: BarChart2     },
+          { id: 'historico', label: 'Histórico', Icon: HistoryIcon   },
         ].map(item => (
           <button
             key={item.id}
@@ -195,7 +235,7 @@ export default function App() {
               activeView === item.id ? 'text-arka-blue' : 'text-white/40'
             }`}
           >
-            <span className="text-xl">{item.emoji}</span>
+            <item.Icon size={22} />
             <span className="text-xs font-medium">{item.label}</span>
           </button>
         ))}

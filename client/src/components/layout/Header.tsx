@@ -51,8 +51,9 @@ function StatPill({ icon, value, label, color, urgent, tvMode }: StatPillProps) 
 export default function Header({ stats, tvMode, onToggleTv, activeView, onViewChange }: HeaderProps) {
   const { time, date } = useClock();
 
+  // Aguardando = abertas que ainda não entraram em andamento
   const urgentes = stats
-    ? stats.total - stats.abertas - stats.emAndamento - stats.concluidas
+    ? stats.total - stats.emAndamento - stats.concluidas
     : 0;
 
   return (
@@ -127,11 +128,7 @@ export default function Header({ stats, tvMode, onToggleTv, activeView, onViewCh
 
         <div className="flex items-center gap-3 shrink-0">
           <div
-            className="text-right rounded-xl px-4 py-2"
-            style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.07)',
-            }}
+            className="text-right rounded-xl px-4 py-2"           
           >
             <div
               className="font-bold tabular-nums text-white leading-none tracking-widest"

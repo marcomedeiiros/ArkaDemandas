@@ -1,4 +1,9 @@
 import { useState } from 'react';
+import {
+  Globe, Sun, CalendarDays, Calendar, TrendingUp,
+  BarChart2, ClipboardList, Settings2, CheckCircle2,
+  Target, Filter, Download, User, Folder,
+} from 'lucide-react';
 import type { Stats, StatsFilter, Priority } from '../../types';
 import { PRIORITIES } from '../../types';
 import { api } from '../../api';
@@ -9,23 +14,23 @@ interface DashboardProps {
 }
 
 const PERIOD_OPTIONS = [
-  { id: 'all',   label: 'Todos',  emoji: '🌐' },
-  { id: 'today', label: 'Hoje',   emoji: '☀️' },
-  { id: 'week',  label: 'Semana', emoji: '📅' },
-  { id: 'month', label: 'Mês',    emoji: '🗓️' },
-  { id: 'year',  label: 'Ano',    emoji: '📆' },
+  { id: 'all',   label: 'Todos',  Icon: Globe },
+  { id: 'today', label: 'Hoje',   Icon: Sun },
+  { id: 'week',  label: 'Semana', Icon: CalendarDays },
+  { id: 'month', label: 'Mês',    Icon: Calendar },
+  { id: 'year',  label: 'Ano',    Icon: TrendingUp },
 ] as const;
 
 function buildStatCards(s: Stats) {
   return [
-    { label: 'Total de Demandas',   value: s.total,              color: '#4D94FF', emoji: '📊', bg: 'rgba(0,102,255,0.1)'  },
-    { label: 'Demandas Abertas',    value: s.abertas,            color: '#4D94FF', emoji: '📋', bg: 'rgba(0,102,255,0.1)'  },
-    { label: 'Em Andamento',        value: s.emAndamento,        color: '#A78BFA', emoji: '⚙️', bg: 'rgba(139,92,246,0.1)' },
-    { label: 'Concluídas Total',    value: s.concluidas,         color: '#4ADE80', emoji: '✅', bg: 'rgba(34,197,94,0.1)'  },
-    { label: 'Concluídas Hoje',     value: s.concluidasHoje,     color: '#4ADE80', emoji: '🎯', bg: 'rgba(34,197,94,0.1)'  },
-    { label: 'Concluídas na Semana',value: s.concluidasSemana,   color: '#22D3EE', emoji: '📈', bg: 'rgba(6,182,212,0.1)'  },
-    { label: 'Concluídas no Mês',   value: s.concluidasMes,      color: '#22D3EE', emoji: '📅', bg: 'rgba(6,182,212,0.1)'  },
-    { label: 'Tempo Médio',         value: `${s.tempoMedioResolucao}d`, color: '#FCD34D', emoji: '⏱', bg: 'rgba(234,179,8,0.1)' },
+    { label: 'Total de Demandas',    value: s.total,              color: '#4D94FF', Icon: BarChart2,    bg: 'rgba(0,102,255,0.1)'  },
+    { label: 'Demandas Abertas',     value: s.abertas,            color: '#4D94FF', Icon: ClipboardList,bg: 'rgba(0,102,255,0.1)'  },
+    { label: 'Em Andamento',         value: s.emAndamento,        color: '#A78BFA', Icon: Settings2,    bg: 'rgba(139,92,246,0.1)' },
+    { label: 'Concluídas Total',     value: s.concluidas,         color: '#4ADE80', Icon: CheckCircle2, bg: 'rgba(34,197,94,0.1)'  },
+    { label: 'Concluídas Hoje',      value: s.concluidasHoje,     color: '#4ADE80', Icon: Target,       bg: 'rgba(34,197,94,0.1)'  },
+    { label: 'Concluídas na Semana', value: s.concluidasSemana,   color: '#22D3EE', Icon: TrendingUp,   bg: 'rgba(6,182,212,0.1)'  },
+    { label: 'Concluídas no Mês',    value: s.concluidasMes,      color: '#22D3EE', Icon: CalendarDays, bg: 'rgba(6,182,212,0.1)'  },
+    { label: 'Tempo Médio',          value: `${s.tempoMedioResolucao}d`, color: '#FCD34D', Icon: Filter, bg: 'rgba(234,179,8,0.1)' },
   ];
 }
 
@@ -82,7 +87,8 @@ export default function Dashboard({ stats, tvMode }: DashboardProps) {
                 className={`period-tab ${filter.period === p.id ? 'active' : ''}`}
                 style={{ fontSize: tvMode ? '0.9rem' : '0.8rem', padding: tvMode ? '8px 16px' : '6px 12px' }}
               >
-                {p.emoji} {p.label}
+                <p.Icon size={13} />
+                {p.label}
               </button>
             ))}
           </div>
@@ -95,7 +101,7 @@ export default function Dashboard({ stats, tvMode }: DashboardProps) {
               className="select-premium"
               style={{ minWidth: '150px', height: '36px', fontSize: '0.8rem', padding: '0 32px 0 12px' }}
             >
-              <option value="">👤 Todos responsáveis</option>
+              <option value="">Todos responsáveis</option>
               {stats?.porResponsavel.map(r => (
                 <option key={r.responsavel} value={r.responsavel}>{r.responsavel}</option>
               ))}
@@ -106,7 +112,7 @@ export default function Dashboard({ stats, tvMode }: DashboardProps) {
               className="select-premium"
               style={{ minWidth: '150px', height: '36px', fontSize: '0.8rem', padding: '0 32px 0 12px' }}
             >
-              <option value="">📂 Todas categorias</option>
+              <option value="">Todas categorias</option>
               {stats?.porCategoria.map(c => (
                 <option key={c.categoria} value={c.categoria}>{c.categoria}</option>
               ))}
@@ -117,7 +123,7 @@ export default function Dashboard({ stats, tvMode }: DashboardProps) {
               className="select-premium"
               style={{ minWidth: '150px', height: '36px', fontSize: '0.8rem', padding: '0 32px 0 12px' }}
             >
-              <option value="">🎯 Todas prioridades</option>
+              <option value="">Todas prioridades</option>
               {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
@@ -125,12 +131,12 @@ export default function Dashboard({ stats, tvMode }: DashboardProps) {
           <button
             onClick={applyFilter}
             disabled={loading}
-            className="btn-primary disabled:opacity-50"
+            className="btn-primary disabled:opacity-50 flex items-center gap-1.5"
             style={{ height: '36px', padding: '0 18px', fontSize: '0.8rem', gap: '6px' }}
           >
             {loading
               ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Filtrando…</>
-              : <>🔍 Aplicar</>
+              : <><Filter size={14} /> Aplicar</>
             }
           </button>
 
@@ -140,10 +146,11 @@ export default function Dashboard({ stats, tvMode }: DashboardProps) {
               <a
                 key={fmt}
                 href={api.exportUrl(fmt)}
-                className="btn-secondary"
+                className="btn-secondary flex items-center gap-1.5"
                 style={{ height: '36px', padding: '0 12px', fontSize: '0.75rem', gap: '5px' }}
               >
-                ⬇️ {fmt.toUpperCase()}
+                <Download size={13} />
+                {fmt.toUpperCase()}
               </a>
             ))}
           </div>
@@ -167,9 +174,9 @@ export default function Dashboard({ stats, tvMode }: DashboardProps) {
               <div className="flex items-start justify-between mb-3">
                 <div
                   className="w-9 h-9 rounded-xl flex items-center justify-center"
-                  style={{ background: card.bg, border: `1px solid ${card.color}25`, fontSize: '1.1rem' }}
+                  style={{ background: card.bg, border: `1px solid ${card.color}25` }}
                 >
-                  {card.emoji}
+                  <card.Icon size={18} style={{ color: card.color }} />
                 </div>
               </div>
               <div
@@ -194,13 +201,13 @@ export default function Dashboard({ stats, tvMode }: DashboardProps) {
 
         {/* ── Charts Row 1 ── */}
         <div className={`grid gap-3 ${tvMode ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 md:grid-cols-3'}`}>
-          <PremiumBarChart title="Por Responsável" emoji="👤" color="#4D94FF"
+          <PremiumBarChart title="Por Responsável" LucideIcon={User} color="#4D94FF"
             data={S.porResponsavel.map(r => ({ label: r.responsavel, value: r.count }))}
             tvMode={tvMode} />
-          <PremiumBarChart title="Por Categoria" emoji="📂" color="#A78BFA"
+          <PremiumBarChart title="Por Categoria" LucideIcon={Folder} color="#A78BFA"
             data={S.porCategoria.map(c => ({ label: c.categoria, value: c.count }))}
             tvMode={tvMode} />
-          <PremiumBarChart title="Por Prioridade" emoji="🎯" color="#FCD34D"
+          <PremiumBarChart title="Por Prioridade" LucideIcon={Target} color="#FCD34D"
             data={S.porPrioridade.map(p => ({
               label: p.prioridade, value: p.count,
               customColor: p.prioridade === 'Urgente' ? '#F87171'
@@ -213,10 +220,10 @@ export default function Dashboard({ stats, tvMode }: DashboardProps) {
 
         {/* ── Charts Row 2 ── */}
         <div className={`grid gap-3 ${tvMode ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 md:grid-cols-2'}`}>
-          <PremiumBarChart title="Criadas por Dia (30 dias)" emoji="📥" color="#4D94FF"
+          <PremiumBarChart title="Criadas por Dia (30 dias)" LucideIcon={TrendingUp} color="#4D94FF"
             data={S.criadasPorDia.map(d => ({ label: d.dia.slice(5), value: d.count }))}
             tvMode={tvMode} />
-          <PremiumBarChart title="Concluídas por Dia (30 dias)" emoji="✅" color="#4ADE80"
+          <PremiumBarChart title="Concluídas por Dia (30 dias)" LucideIcon={CheckCircle2} color="#4ADE80"
             data={S.concluidasPorDia.map(d => ({ label: d.dia.slice(5), value: d.count }))}
             tvMode={tvMode} />
         </div>
@@ -225,14 +232,14 @@ export default function Dashboard({ stats, tvMode }: DashboardProps) {
         <div className={`grid gap-3 ${tvMode ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 md:grid-cols-2'}`}>
           <RankingPanel
             title="Ranking por Responsável"
-            emoji="🏆"
+            LucideIcon={User}
             data={S.porResponsavel.sort((a, b) => b.count - a.count)}
             labelKey="responsavel"
             tvMode={tvMode}
           />
           <RankingPanel
             title="Ranking por Categoria"
-            emoji="📂"
+            LucideIcon={Folder}
             data={S.porCategoria.sort((a, b) => b.count - a.count)}
             labelKey="categoria"
             tvMode={tvMode}
@@ -248,10 +255,10 @@ export default function Dashboard({ stats, tvMode }: DashboardProps) {
    PremiumBarChart
 ══════════════════════════════════════ */
 function PremiumBarChart({
-  title, emoji, data, color, tvMode,
+  title, LucideIcon, data, color, tvMode,
 }: {
   title: string;
-  emoji: string;
+  LucideIcon: React.ElementType;
   data: { label: string; value: number; customColor?: string }[];
   color: string;
   tvMode?: boolean;
@@ -272,9 +279,9 @@ function PremiumBarChart({
       <div className="flex items-center gap-2 mb-4">
         <div
           className="w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{ background: `${color}15`, border: `1px solid ${color}28`, fontSize: '1rem' }}
+          style={{ background: `${color}15`, border: `1px solid ${color}28` }}
         >
-          {emoji}
+          <LucideIcon size={16} style={{ color }} />
         </div>
         <h3
           className="font-bold"
@@ -339,14 +346,13 @@ function PremiumBarChart({
 /* ══════════════════════════════════════
    RankingPanel
 ══════════════════════════════════════ */
-const MEDALS = ['🥇', '🥈', '🥉'];
 const RANK_COLORS = ['#FCD34D', '#94A3B8', '#FB923C'];
 
 function RankingPanel({
-  title, emoji, data, labelKey, tvMode,
+  title, LucideIcon, data, labelKey, tvMode,
 }: {
   title: string;
-  emoji: string;
+  LucideIcon: React.ElementType;
   data: { [key: string]: string | number }[];
   labelKey: string;
   tvMode?: boolean;
@@ -366,9 +372,9 @@ function RankingPanel({
       <div className="flex items-center gap-2 mb-4">
         <div
           className="w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{ background: 'rgba(252,211,77,0.12)', border: '1px solid rgba(252,211,77,0.22)', fontSize: '1rem' }}
+          style={{ background: 'rgba(252,211,77,0.12)', border: '1px solid rgba(252,211,77,0.22)' }}
         >
-          {emoji}
+          <LucideIcon size={16} style={{ color: '#FCD34D' }} />
         </div>
         <h3
           className="font-bold"
@@ -386,7 +392,7 @@ function RankingPanel({
         <div className="space-y-2">
           {data.slice(0, 6).map((item, i) => {
             const pct = Math.round(((item.count as number) / max) * 100);
-            const medal = MEDALS[i] ?? `${i + 1}`;
+            const medal = i < 3 ? ['1°', '2°', '3°'][i] : `${i + 1}°`;
             const rankColor = RANK_COLORS[i] ?? '#4D94FF';
             return (
               <div

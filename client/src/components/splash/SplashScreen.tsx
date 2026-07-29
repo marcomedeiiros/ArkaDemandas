@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface SplashScreenProps {
   onComplete: () => void;
@@ -8,25 +8,29 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
   const [phase,    setPhase]    = useState<'entering' | 'visible' | 'leaving'>('entering');
   const [progress, setProgress] = useState(0);
 
+  // Stable ref so the effect never re-runs when the parent re-renders
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+
   useEffect(() => {
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) { clearInterval(interval); return 100; }
-        // Accelerate near the end for a snappier feel
         const step = prev < 70 ? 2 : prev < 90 ? 1.5 : 1;
         return Math.min(prev + step, 100);
       });
     }, 48);
 
-    const leaveTimer    = setTimeout(() => setPhase('leaving'),  2900);
-    const completeTimer = setTimeout(onComplete,                  3500);
+    const leaveTimer    = setTimeout(() => setPhase('leaving'),          2900);
+    const completeTimer = setTimeout(() => onCompleteRef.current(),      3500);
 
     return () => {
       clearInterval(interval);
       clearTimeout(leaveTimer);
       clearTimeout(completeTimer);
     };
-  }, [onComplete]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once only — onComplete is accessed via ref
 
   return (
     <div

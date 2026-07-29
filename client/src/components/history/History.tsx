@@ -1,4 +1,9 @@
 import { useState, useEffect } from 'react';
+import {
+  Globe, Sun, CalendarDays, Calendar, TrendingUp,
+  BarChart2, ClipboardList, CheckCircle2, Timer,
+  History as HistoryIcon, ScrollText, InboxIcon,
+} from 'lucide-react';
 import { api } from '../../api';
 import type { ActivityLog, Stats } from '../../types';
 import { ACTION_LABELS } from '../../types';
@@ -11,11 +16,11 @@ interface HistoryProps {
 }
 
 const PERIODS = [
-  { id: 'all',   label: 'Todos',  emoji: '🌐' },
-  { id: 'today', label: 'Hoje',   emoji: '☀️' },
-  { id: 'week',  label: 'Semana', emoji: '📅' },
-  { id: 'month', label: 'Mês',    emoji: '🗓️' },
-  { id: 'year',  label: 'Ano',    emoji: '📆' },
+  { id: 'all',   label: 'Todos',  Icon: Globe },
+  { id: 'today', label: 'Hoje',   Icon: Sun },
+  { id: 'week',  label: 'Semana', Icon: CalendarDays },
+  { id: 'month', label: 'Mês',    Icon: Calendar },
+  { id: 'year',  label: 'Ano',    Icon: TrendingUp },
 ];
 
 export default function History({ stats, tvMode }: HistoryProps) {
@@ -47,10 +52,10 @@ export default function History({ stats, tvMode }: HistoryProps) {
         {stats && (
           <div className={`grid gap-3 ${tvMode ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 md:grid-cols-4'}`}>
             {[
-              { label: 'Total',      value: stats.total,              color: '#4D94FF', emoji: '📊', bg: 'rgba(0,102,255,0.1)'  },
-              { label: 'Abertas',    value: stats.abertas,            color: '#4D94FF', emoji: '📋', bg: 'rgba(0,102,255,0.1)'  },
-              { label: 'Concluídas', value: stats.concluidas,         color: '#4ADE80', emoji: '✅', bg: 'rgba(34,197,94,0.1)'  },
-              { label: 'Tempo Médio',value: `${stats.tempoMedioResolucao}d`, color: '#FCD34D', emoji: '⏱', bg: 'rgba(234,179,8,0.1)' },
+              { label: 'Total',      value: stats.total,              color: '#4D94FF', Icon: BarChart2,    bg: 'rgba(0,102,255,0.1)'  },
+              { label: 'Abertas',    value: stats.abertas,            color: '#4D94FF', Icon: ClipboardList, bg: 'rgba(0,102,255,0.1)'  },
+              { label: 'Concluídas', value: stats.concluidas,         color: '#4ADE80', Icon: CheckCircle2, bg: 'rgba(34,197,94,0.1)'  },
+              { label: 'Tempo Médio',value: `${stats.tempoMedioResolucao}d`, color: '#FCD34D', Icon: Timer, bg: 'rgba(234,179,8,0.1)' },
             ].map((c, i) => (
               <div
                 key={i}
@@ -65,9 +70,9 @@ export default function History({ stats, tvMode }: HistoryProps) {
               >
                 <div
                   className="rounded-xl flex items-center justify-center shrink-0"
-                  style={{ width: '40px', height: '40px', background: c.bg, border: `1px solid ${c.color}25`, fontSize: '1.2rem' }}
+                  style={{ width: '40px', height: '40px', background: c.bg, border: `1px solid ${c.color}25` }}
                 >
-                  {c.emoji}
+                  <c.Icon size={18} style={{ color: c.color }} />
                 </div>
                 <div>
                   <div
@@ -122,7 +127,8 @@ export default function History({ stats, tvMode }: HistoryProps) {
                 className={`period-tab ${period === p.id ? 'active' : ''}`}
                 style={{ fontSize: tvMode ? '0.85rem' : '0.76rem', padding: tvMode ? '7px 14px' : '5px 10px' }}
               >
-                {p.emoji} {p.label}
+                <p.Icon size={13} />
+                {p.label}
               </button>
             ))}
           </div>

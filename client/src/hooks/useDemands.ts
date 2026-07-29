@@ -14,6 +14,8 @@ export function useDemands(search?: string) {
       setError(null);
     } catch (err) {
       setError(String(err));
+      // Garante que o loading para mesmo em caso de erro,
+      // senão o spinner fica preso para sempre
     } finally {
       setLoading(false);
     }

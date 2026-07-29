@@ -12,10 +12,10 @@ export function getPriorityColor(priority: Priority): string {
 
 export function getPriorityLabel(priority: Priority): string {
   const map: Record<Priority, string> = {
-    Baixa: '🟢 BAIXA',
-    Média: '🟡 MÉDIA',
-    Alta: '🟠 ALTA',
-    Urgente: '🔴 URGENTE',
+    Baixa: 'BAIXA',
+    Média: 'MÉDIA',
+    Alta: 'ALTA',
+    Urgente: 'URGENTE',
   };
   return map[priority];
 }
@@ -55,13 +55,14 @@ export function getActionColor(action: string): string {
 }
 
 export function getActionEmoji(action: string): string {
+  // returns a short text label instead of emoji; used as dot content in the timeline
   const map: Record<string, string> = {
-    criada: '🆕',
-    editada: '✏️',
-    excluida: '🗑️',
-    movida: '🔄',
-    concluida: '✅',
-    reaberta: '🔁',
+    criada:   '+',
+    editada:  '✎',
+    excluida: '×',
+    movida:   '→',
+    concluida:'✓',
+    reaberta: '↺',
   };
   return map[action] || '•';
 }

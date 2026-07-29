@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { DemandService } from '../services/DemandService.js';
+import { DemandService } from '../services/demandService.js';
 import type { CreateDemandInput, UpdateDemandInput } from '../models/Demand.model.js';
 import type { ColumnStatus } from '../types.js';
 

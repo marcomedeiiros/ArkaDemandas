@@ -1,14 +1,16 @@
 import { Router, Request, Response } from 'express';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
-import * as demandService from '../services/demandService.js';
+import { DemandService } from '../services/demandService.js';
 import type { Demand } from '../types.js';
 import { COLUMN_LABELS } from '../types.js';
 
 export const exportRouter = Router();
 
+const demandService = new DemandService();
+
 function getDemandsForExport(): Demand[] {
-  return demandService.getAllDemands();
+  return demandService.getAllDemands() as Demand[];
 }
 
 exportRouter.get('/csv', (_req: Request, res: Response) => {
@@ -115,3 +117,5 @@ exportRouter.get('/pdf', (_req: Request, res: Response) => {
 
   doc.end();
 });
+
+export default exportRouter;

@@ -9,7 +9,7 @@ export function useWebSocket(onMessage: (data: { type: string; data: unknown }) 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const host = window.location.hostname;
     const port = import.meta.env.DEV ? '3001' : window.location.port;
-    const wsUrl = `${protocol}//${host}:${port}`;
+    const wsUrl = `${protocol}//${host}:${port}/ws`;
 
     function connect() {
       const ws = new WebSocket(wsUrl);

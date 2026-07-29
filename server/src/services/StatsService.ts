@@ -35,10 +35,17 @@ export class StatsService {
     }
 
     const now = new Date();
-    const today = new Date(now.setHours(0, 0, 0, 0));
-    const weekAgo = new Date(now.setDate(now.getDate() - 7));
-    const monthAgo = new Date(now.setMonth(now.getMonth() - 1));
-    const yearAgo = new Date(now.setFullYear(now.getFullYear() - 1));
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    const monthAgo = new Date(today);
+    monthAgo.setMonth(monthAgo.getMonth() - 1);
+
+    const yearAgo = new Date(today);
+    yearAgo.setFullYear(yearAgo.getFullYear() - 1);
 
     if (filter?.period) {
       const startDate = 

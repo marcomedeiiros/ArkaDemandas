@@ -114,14 +114,17 @@ export class DemandService {
     const existing = this.demandRepo.findById(id);
     if (!existing) return false;
 
-    this.logRepo.create({
+    const logEntry = {
       demand_id: id,
-      action: 'excluida',
+      action: 'excluida' as const,
       details: `Demanda "${existing.titulo}" foi excluída`,
       user,
-    });
+    };
 
     this.logRepo.deleteByDemandId(id);
+
+    this.logRepo.create(logEntry);
+
     return this.demandRepo.delete(id);
   }
 }
