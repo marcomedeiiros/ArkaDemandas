@@ -132,7 +132,7 @@ export class DemandRepository {
     
     if (status === 'concluidas') {
       data.data_conclusao = new Date().toISOString().split('T')[0];
-    } else if (status !== 'concluidas') {
+    } else {
       data.data_conclusao = null;
     }
 

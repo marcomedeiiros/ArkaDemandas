@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import {
   Globe, Sun, CalendarDays, Calendar, TrendingUp,
   BarChart2, ClipboardList, CheckCircle2, Timer,
-  History as HistoryIcon, ScrollText, InboxIcon,
 } from 'lucide-react';
 import { api } from '../../api';
 import type { ActivityLog, Stats } from '../../types';

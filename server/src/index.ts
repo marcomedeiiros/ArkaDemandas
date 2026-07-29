@@ -7,6 +7,8 @@ import statsRoutes from './routes/stats.routes.js';
 import logsRoutes from './routes/logs.routes.js';
 import exportRoutes from './routes/export.js';
 
+import { setWebSocketServer } from './websocket.js';
+
 const PORT = 3001;
 const app = express();
 
@@ -51,22 +53,11 @@ async function start() {
 
     const server = app.listen(PORT, () => {
       console.log(`✅ API rodando em http://localhost:${PORT}`);
-      console.log(`📊 Endpoints disponíveis:`);
-      console.log(`   GET    /api/demands`);
-      console.log(`   GET    /api/demands/:id`);
-      console.log(`   POST   /api/demands`);
-      console.log(`   PUT    /api/demands/:id`);
-      console.log(`   PATCH  /api/demands/:id/status`);
-      console.log(`   PATCH  /api/demands/:id/complete`);
-      console.log(`   POST   /api/demands/:id/duplicate`);
-      console.log(`   DELETE /api/demands/:id`);
-      console.log(`   GET    /api/stats`);
-      console.log(`   GET    /api/logs`);
-      console.log(`   GET    /api/export/{csv,excel,pdf}`);
     });
 
     // WebSocket server for real-time updates
     const wss = new WebSocketServer({ server, path: '/ws' });
+    setWebSocketServer(wss);
     console.log('✅ WebSocket rodando em ws://localhost:' + PORT + '/ws');
 
     wss.on('connection', (ws) => {

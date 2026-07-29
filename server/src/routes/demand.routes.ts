@@ -5,7 +5,6 @@ import { DemandRepository } from '../repositories/DemandRepository.js';
 const router = Router();
 const controller = new DemandController();
 
-// Meta values route must come before /:id to avoid being caught by it
 router.get('/meta/values', (_req, res) => {
   const repo = new DemandRepository();
   const all = repo.findAll();
@@ -18,7 +17,7 @@ router.get('/', controller.getAll);
 router.get('/:id', controller.getById);
 router.post('/', controller.create);
 router.put('/:id', controller.update);
-// /status is used internally; /move is the alias called by the frontend
+
 router.patch('/:id/status', controller.updateStatus);
 router.patch('/:id/move', controller.updateStatus);
 router.patch('/:id/complete', controller.complete);

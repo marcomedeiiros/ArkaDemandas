@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { DemandService } from '../services/demandService.js';
 import type { CreateDemandInput, UpdateDemandInput } from '../models/Demand.model.js';
 import type { ColumnStatus } from '../types.js';
+import { broadcastWs } from '../websocket.js';
 
 export class DemandController {
   private service: DemandService;
@@ -27,7 +28,7 @@ export class DemandController {
 
   getById = (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const demand = this.service.getDemandById(id);
 
       if (!demand) {
@@ -43,18 +44,18 @@ export class DemandController {
 
   create = (req: Request, res: Response) => {
     try {
-      const user = req.headers['x-user'] as string || 'Sistema';
+      const user = (req.headers['x-user'] as string) || 'Sistema';
       const data: CreateDemandInput = {
         ...req.body,
         criado_por: user,
       };
 
-      // Validação básica
       if (!data.titulo || !data.cliente || !data.responsavel || !data.categoria || !data.prioridade) {
         return res.status(400).json({ error: 'Campos obrigatórios faltando' });
       }
 
       const demand = this.service.createDemand(data);
+      broadcastWs('demand_created', demand);
       res.status(201).json(demand);
     } catch (error) {
       console.error('Error creating demand:', error);
@@ -64,8 +65,8 @@ export class DemandController {
 
   update = (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
-      const user = req.headers['x-user'] as string || 'Sistema';
+      const id = String(req.params.id);
+      const user = (req.headers['x-user'] as string) || 'Sistema';
       const data: UpdateDemandInput = req.body;
 
       const demand = this.service.updateDemand(id, data, user);
@@ -74,6 +75,7 @@ export class DemandController {
         return res.status(404).json({ error: 'Demanda não encontrada' });
       }
 
+      broadcastWs('demand_updated', demand);
       res.json(demand);
     } catch (error) {
       console.error('Error updating demand:', error);
@@ -83,9 +85,9 @@ export class DemandController {
 
   updateStatus = (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
+      const id = String(req.params.id);
       const { status } = req.body as { status: ColumnStatus };
-      const user = req.headers['x-user'] as string || 'Sistema';
+      const user = (req.headers['x-user'] as string) || 'Sistema';
 
       if (!status) {
         return res.status(400).json({ error: 'Status é obrigatório' });
@@ -97,6 +99,7 @@ export class DemandController {
         return res.status(404).json({ error: 'Demanda não encontrada' });
       }
 
+      broadcastWs('demand_moved', demand);
       res.json(demand);
     } catch (error) {
       console.error('Error updating status:', error);
@@ -106,8 +109,8 @@ export class DemandController {
 
   complete = (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
-      const user = req.headers['x-user'] as string || 'Sistema';
+      const id = String(req.params.id);
+      const user = (req.headers['x-user'] as string) || 'Sistema';
 
       const demand = this.service.completeDemand(id, user);
 
@@ -115,6 +118,7 @@ export class DemandController {
         return res.status(404).json({ error: 'Demanda não encontrada' });
       }
 
+      broadcastWs('demand_moved', demand);
       res.json(demand);
     } catch (error) {
       console.error('Error completing demand:', error);
@@ -124,8 +128,8 @@ export class DemandController {
 
   duplicate = (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
-      const user = req.headers['x-user'] as string || 'Sistema';
+      const id = String(req.params.id);
+      const user = (req.headers['x-user'] as string) || 'Sistema';
 
       const demand = this.service.duplicateDemand(id, user);
 
@@ -133,6 +137,7 @@ export class DemandController {
         return res.status(404).json({ error: 'Demanda não encontrada' });
       }
 
+      broadcastWs('demand_created', demand);
       res.status(201).json(demand);
     } catch (error) {
       console.error('Error duplicating demand:', error);
@@ -142,8 +147,8 @@ export class DemandController {
 
   delete = (req: Request, res: Response) => {
     try {
-      const { id } = req.params;
-      const user = req.headers['x-user'] as string || 'Sistema';
+      const id = String(req.params.id);
+      const user = (req.headers['x-user'] as string) || 'Sistema';
 
       const success = this.service.deleteDemand(id, user);
 
@@ -151,6 +156,7 @@ export class DemandController {
         return res.status(404).json({ error: 'Demanda não encontrada' });
       }
 
+      broadcastWs('demand_deleted', { id });
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting demand:', error);

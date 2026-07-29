@@ -42,19 +42,31 @@ export interface CreateDemandDTO {
 
 export interface Stats {
   total: number;
-  abertas: number;
-  concluidas: number;
+  novas: number;
   emAndamento: number;
+  aguardando: number;
+  emRevisao: number;
+  concluidas: number;
+  abertas: number;
+  hoje: number;
+  semana: number;
   concluidasHoje: number;
   concluidasSemana: number;
   concluidasMes: number;
   concluidasAno: number;
   tempoMedioResolucao: number;
+  tempoMedioAtendimento: number;
+  taxaConclusao: number;
+  porStatus: { status: string; count: number; label: string }[];
   porResponsavel: { responsavel: string; count: number }[];
   porCategoria: { categoria: string; count: number }[];
   porPrioridade: { prioridade: string; count: number }[];
   criadasPorDia: { dia: string; count: number }[];
   concluidasPorDia: { dia: string; count: number }[];
+  criadasPorSemana: { semana: string; count: number }[];
+  criadasPorMes: { mes: string; count: number }[];
+  evolucaoDemandas: { dia: string; criadas: number; acumuladas: number }[];
+  comparativoAbertasConcluidas: { dia: string; abertas: number; concluidas: number }[];
 }
 
 export interface StatsFilter {

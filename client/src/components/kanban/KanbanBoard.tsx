@@ -38,19 +38,28 @@ export default function KanbanBoard({
 }: KanbanBoardProps) {
   const [activeDemand, setActiveDemand] = useState<Demand | null>(null);
   const [search, setSearch] = useState('');
+  const [filterResponsavel, setFilterResponsavel] = useState('');
+  const [filterCategoria, setFilterCategoria] = useState('');
+  const [filterPrioridade, setFilterPrioridade] = useState('');
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } })
   );
 
-  const filtered = search
-    ? demands.filter(d =>
-        d.id.toLowerCase().includes(search.toLowerCase()) ||
-        d.cliente.toLowerCase().includes(search.toLowerCase()) ||
-        d.responsavel.toLowerCase().includes(search.toLowerCase()) ||
-        d.titulo.toLowerCase().includes(search.toLowerCase())
-      )
-    : demands;
+  const filtered = demands.filter(d => {
+    const sLower = search.toLowerCase();
+    const matchesSearch = !search || (
+      d.id.toLowerCase().includes(sLower) ||
+      d.cliente.toLowerCase().includes(sLower) ||
+      d.responsavel.toLowerCase().includes(sLower) ||
+      d.titulo.toLowerCase().includes(sLower) ||
+      (d.descricao && d.descricao.toLowerCase().includes(sLower))
+    );
+    const matchesResp = !filterResponsavel || d.responsavel === filterResponsavel;
+    const matchesCat = !filterCategoria || d.categoria === filterCategoria;
+    const matchesPrio = !filterPrioridade || d.prioridade === filterPrioridade;
+    return matchesSearch && matchesResp && matchesCat && matchesPrio;
+  });
 
   const getColumnDemands = (status: ColumnStatus) =>
     filtered.filter(d => d.status === status);
@@ -79,39 +88,49 @@ export default function KanbanBoard({
     }
   };
 
+  const hasActiveFilters = Boolean(search || filterResponsavel || filterCategoria || filterPrioridade);
+
+  const clearFilters = () => {
+    setSearch('');
+    setFilterResponsavel('');
+    setFilterCategoria('');
+    setFilterPrioridade('');
+  };
+
   return (
     <div className="flex flex-col h-full">
       {!tvMode && (
         <div
-          className="shrink-0 px-5 pt-3 pb-3"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+          className="shrink-0 px-5 pt-3 pb-3 flex flex-wrap items-center justify-between gap-3"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(15,18,24,0.6)' }}
         >
-          <div className="flex items-center gap-3">
-            <div className="flex-1 relative" style={{ maxWidth: '520px' }}>
+          <div className="flex items-center gap-3 flex-wrap flex-1">
+            {/* Search Input */}
+            <div className="relative min-w-[240px] flex-1 max-w-sm">
               <Icon
                 name="search"
-                size={tvMode ? 18 : 15}
+                size={15}
                 className="absolute top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ left: '14px', color: 'rgba(255,255,255,0.28)' }}
+                style={{ left: '12px', color: 'rgba(255,255,255,0.3)' }}
               />
               <input
                 id="kanban-search"
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar por ID, cliente, responsável ou título..."
+                placeholder="Buscar por ID, título, cliente ou técnico..."
                 className="input-premium"
                 style={{
-                  paddingLeft: '40px',
-                  paddingRight: search ? '36px' : '14px',
-                  fontSize: tvMode ? '0.95rem' : '0.84rem',
-                  height: tvMode ? '46px' : '40px',
+                  paddingLeft: '36px',
+                  paddingRight: search ? '32px' : '12px',
+                  fontSize: '0.82rem',
+                  height: '38px',
                 }}
               />
               {search && (
                 <button
                   onClick={() => setSearch('')}
-                  className="absolute top-1/2 -translate-y-1/2 right-3 flex items-center justify-center w-5 h-5 rounded-full transition-all hover:bg-white/10"
+                  className="absolute top-1/2 -translate-y-1/2 right-2.5 flex items-center justify-center w-5 h-5 rounded-full transition-all hover:bg-white/10"
                   style={{ color: 'rgba(255,255,255,0.3)' }}
                 >
                   <Icon name="close" size={12} />
@@ -124,15 +143,25 @@ export default function KanbanBoard({
               onClick={onCreate}
               className="btn-primary shrink-0"
               style={{
-                height: tvMode ? '46px' : '40px',
-                padding: tvMode ? '0 28px' : '0 20px',
-                fontSize: tvMode ? '1rem' : '0.875rem',
+                height: '38px',
+                padding: '0 18px',
+                fontSize: '0.85rem',
                 gap: '8px',
               }}
             >
-              <Icon name="plus" size={18} />
+              <Icon name="plus" size={16} />
               Nova Demanda
             </button>
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="btn-secondary text-xs px-3 flex items-center gap-1 hover:text-white"
+                style={{ height: '38px' }}
+              >
+                <Icon name="close" size={12} />
+                Limpar
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -168,9 +197,9 @@ export default function KanbanBoard({
           </div>
         </div>
 
-        <DragOverlay dropAnimation={{ duration: 200, easing: 'cubic-bezier(0.16,1,0.3,1)' }}>
+        <DragOverlay dropAnimation={{ duration: 150, easing: 'cubic-bezier(0.16,1,0.3,1)' }}>
           {activeDemand && (
-            <div style={{ opacity: 0.92, transform: 'rotate(1.5deg) scale(1.02)', transformOrigin: 'top left' }}>
+            <div style={{ opacity: 0.94, transform: 'rotate(1deg) scale(1.02)', transformOrigin: 'top left' }}>
               <DemandCard demand={activeDemand} onEdit={() => {}} onDuplicate={() => {}} onDelete={() => {}} tvMode={tvMode} />
             </div>
           )}

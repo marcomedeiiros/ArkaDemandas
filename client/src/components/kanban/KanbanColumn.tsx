@@ -39,42 +39,54 @@ export default function KanbanColumn({
       }}
     >
       <div
-        className="shrink-0 h-[3px] rounded-t-2xl"
+        className="shrink-0 h-[4px] rounded-t-2xl"
         style={{
-          background: `linear-gradient(90deg, ${color}cc, ${color}55)`,
-          boxShadow: `0 0 12px ${color}40`,
+          background: `linear-gradient(90deg, ${color}, ${color}88, ${color})`,
+          boxShadow: `0 0 16px ${color}A0, 0 0 32px ${color}50`,
         }}
       />
 
       <div
-        className="col-header shrink-0"
+        className="col-header shrink-0 flex items-center gap-2.5"
         style={{
-          background: `linear-gradient(135deg, ${color}12 0%, ${color}06 100%)`,
-          borderBottom: `1px solid ${color}18`,
+          background: `linear-gradient(135deg, ${color}22 0%, ${color}0A 100%)`,
+          borderBottom: `1px solid ${color}35`,
+          boxShadow: `inset 0 1px 0 ${color}30, 0 4px 20px ${color}18`,
           padding: tvMode ? '14px 16px' : '12px 14px',
         }}
       >
-        <Icon name={icon} size={tvMode ? 20 : 18} style={{ color }} />
+        <div
+          className="p-1.5 rounded-xl flex items-center justify-center"
+          style={{
+            background: `${color}25`,
+            border: `1px solid ${color}55`,
+            boxShadow: `0 0 12px ${color}60`,
+          }}
+        >
+          <Icon name={icon} size={tvMode ? 20 : 17} style={{ color, filter: `drop-shadow(0 0 6px ${color})` }} />
+        </div>
         <h2
           className="font-bold flex-1 tracking-wide"
           style={{
-            fontSize: tvMode ? '1rem' : '0.875rem',
-            color: 'rgba(255,255,255,0.88)',
+            fontSize: tvMode ? '1.05rem' : '0.9rem',
+            color: '#FFFFFF',
             letterSpacing: '0.03em',
+            textShadow: `0 0 12px ${color}70`,
           }}
         >
           {label}
         </h2>
         <span
-          className="font-bold tabular-nums"
+          className="font-extrabold tabular-nums"
           style={{
-            background: `${color}22`,
-            color: color,
-            border: `1px solid ${color}38`,
+            background: `${color}30`,
+            color: '#FFFFFF',
+            border: `1px solid ${color}60`,
             borderRadius: '999px',
-            padding: tvMode ? '3px 11px' : '2px 9px',
-            fontSize: tvMode ? '0.85rem' : '0.72rem',
-            boxShadow: `0 0 8px ${color}20`,
+            padding: tvMode ? '4px 12px' : '3px 10px',
+            fontSize: tvMode ? '0.88rem' : '0.75rem',
+            boxShadow: `0 0 14px ${color}60`,
+            textShadow: `0 0 8px ${color}`,
           }}
         >
           {demands.length}

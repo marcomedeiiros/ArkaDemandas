@@ -72,10 +72,10 @@ export default function DemandCard({ demand, onEdit, onDuplicate, onDelete, tvMo
         transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
       }}
       onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)';
+        (e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)';
         (e.currentTarget as HTMLElement).style.boxShadow =
-          `0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,102,255,0.2)`;
-        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,102,255,0.22)';
+          `0 10px 40px rgba(0,0,0,0.6), 0 0 24px ${priorityColor}45, 0 0 0 1px ${priorityColor}60`;
+        (e.currentTarget as HTMLElement).style.borderColor = `${priorityColor}80`;
       }}
       onMouseLeave={e => {
         (e.currentTarget as HTMLElement).style.transform = '';
@@ -87,32 +87,34 @@ export default function DemandCard({ demand, onEdit, onDuplicate, onDelete, tvMo
         className="priority-stripe"
         style={{
           backgroundColor: priorityColor,
-          boxShadow: `0 0 8px ${priorityColor}60`,
+          boxShadow: `0 0 14px ${priorityColor}, 0 0 28px ${priorityColor}80`,
         }}
       />
 
       <div
         className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300"
-        style={{ background: 'radial-gradient(ellipse at top left, rgba(0,102,255,0.04) 0%, transparent 60%)' }}
+        style={{ background: `radial-gradient(ellipse at top left, ${priorityColor}15 0%, transparent 65%)` }}
       />
 
       <div className="relative" style={{ padding }}>
         <div className="flex items-start justify-between gap-2 mb-3">
           <span
             className="font-mono font-bold tracking-wide"
-            style={{ fontSize: fs.id, color: '#4D94FF', letterSpacing: '0.05em' }}
+            style={{ fontSize: fs.id, color: '#4D94FF', letterSpacing: '0.05em', textShadow: '0 0 12px rgba(77,148,255,0.7)' }}
           >
             {demand.id}
           </span>
 
           <div className="flex items-center gap-1.5 shrink-0">
             <span
-              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold border"
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-extrabold border"
               style={{
                 fontSize: tvMode ? '0.72rem' : '0.64rem',
-                background: `${priorityColor}1A`,
-                color: priorityColor,
-                borderColor: `${priorityColor}38`,
+                background: `${priorityColor}25`,
+                color: '#FFFFFF',
+                borderColor: `${priorityColor}60`,
+                boxShadow: `0 0 12px ${priorityColor}50`,
+                textShadow: `0 0 6px ${priorityColor}`,
                 letterSpacing: '0.03em',
               }}
             >
@@ -175,12 +177,22 @@ export default function DemandCard({ demand, onEdit, onDuplicate, onDelete, tvMo
         </div>
 
         <div
-          className="font-semibold text-white leading-snug mb-3 cursor-pointer"
+          className="font-semibold text-white leading-snug mb-1.5 cursor-pointer"
           style={{ fontSize: fs.title }}
           onClick={() => onEdit(demand)}
         >
           {demand.titulo}
         </div>
+
+        {demand.descricao && (
+          <p
+            className="line-clamp-2 text-xs font-normal mb-3 cursor-pointer leading-relaxed"
+            style={{ color: 'rgba(255,255,255,0.6)' }}
+            onClick={() => onEdit(demand)}
+          >
+            {demand.descricao}
+          </p>
+        )}
 
         <div className="space-y-2">
           <div className="flex items-center gap-2">

@@ -29,25 +29,45 @@ export function useDemands(search?: string) {
 
   const createDemand = async (data: CreateDemandDTO) => {
     const demand = await api.createDemand(data);
-    setDemands(prev => [demand, ...prev]);
+    setDemands(prev => {
+      const exists = prev.some(d => d.id === demand.id);
+      return exists ? prev : [demand, ...prev];
+    });
     return demand;
   };
 
   const updateDemand = async (id: string, data: Partial<CreateDemandDTO>) => {
-    const demand = await api.updateDemand(id, data);
-    setDemands(prev => prev.map(d => d.id === id ? demand : d));
-    return demand;
+    setDemands(prev => prev.map(d => d.id === id ? { ...d, ...data } as Demand : d));
+    try {
+      const demand = await api.updateDemand(id, data);
+      setDemands(prev => prev.map(d => d.id === id ? demand : d));
+      return demand;
+    } catch (err) {
+      fetchDemands();
+      throw err;
+    }
   };
 
   const deleteDemand = async (id: string) => {
-    await api.deleteDemand(id);
     setDemands(prev => prev.filter(d => d.id !== id));
+    try {
+      await api.deleteDemand(id);
+    } catch (err) {
+      fetchDemands();
+      throw err;
+    }
   };
 
   const moveDemand = async (id: string, status: ColumnStatus) => {
-    const demand = await api.moveDemand(id, status);
-    setDemands(prev => prev.map(d => d.id === id ? demand : d));
-    return demand;
+    setDemands(prev => prev.map(d => d.id === id ? { ...d, status } : d));
+    try {
+      const demand = await api.moveDemand(id, status);
+      setDemands(prev => prev.map(d => d.id === id ? demand : d));
+      return demand;
+    } catch (err) {
+      fetchDemands();
+      throw err;
+    }
   };
 
   const handleWsMessage = useCallback((message: { type: string; data: unknown }) => {

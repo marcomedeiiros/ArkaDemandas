@@ -86,6 +86,25 @@ export async function initDatabase(): Promise<SqlJsDatabase> {
     )
   `);
 
+  // Migrations for existing database schema compatibility
+  try {
+    const actCols = queryAll<{ name: string }>('PRAGMA table_info(activity_logs)').map(c => c.name);
+    if (actCols.length > 0 && !actCols.includes('user')) {
+      db.run("ALTER TABLE activity_logs ADD COLUMN user TEXT DEFAULT 'Sistema'");
+    }
+  } catch (e) {
+    console.error('Error migrating activity_logs table:', e);
+  }
+
+  try {
+    const demCols = queryAll<{ name: string }>('PRAGMA table_info(demands)').map(c => c.name);
+    if (demCols.length > 0 && !demCols.includes('criado_por')) {
+      db.run("ALTER TABLE demands ADD COLUMN criado_por TEXT DEFAULT 'Sistema'");
+    }
+  } catch (e) {
+    console.error('Error migrating demands table:', e);
+  }
+
   saveDatabase();
   return db;
 }
@@ -100,7 +119,7 @@ export function saveDatabase() {
   fs.writeFileSync(dbPath, buffer);
 }
 
-export function queryAll<T>(sql: string, params: unknown[] = []): T[] {
+export function queryAll<T>(sql: string, params: any[] = []): T[] {
   const stmt = db.prepare(sql);
   stmt.bind(params);
   const results: T[] = [];
@@ -111,12 +130,12 @@ export function queryAll<T>(sql: string, params: unknown[] = []): T[] {
   return results;
 }
 
-export function queryOne<T>(sql: string, params: unknown[] = []): T | undefined {
+export function queryOne<T>(sql: string, params: any[] = []): T | undefined {
   const results = queryAll<T>(sql, params);
   return results[0];
 }
 
-export function run(sql: string, params: unknown[] = []): void {
+export function run(sql: string, params: any[] = []): void {
   db.run(sql, params);
   saveDatabase();
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Pencil, FilePlus, X, Timer, Calendar as CalendarIcon,
   CheckCircle2, Trash2, Save, Monitor, Building2, User,
-  Folder, Target, Clock, FileText, MessageSquare,
+  Folder, Target, Clock, FileText,
 } from 'lucide-react';
 import type { Demand, CreateDemandDTO } from '../../types';
 import { PRIORITIES } from '../../types';
@@ -56,7 +56,7 @@ export default function DemandModal({
 }: DemandModalProps) {
   const [form, setForm] = useState<CreateDemandDTO>({
     titulo: '', descricao: '', cliente: '', responsavel: '',
-    categoria: '', prioridade: 'Média', prazo: '', observacoes: '',
+    categoria: '', prioridade: 'Média', prazo: '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -65,11 +65,11 @@ export default function DemandModal({
       setForm({
         titulo: demand.titulo, descricao: demand.descricao, cliente: demand.cliente,
         responsavel: demand.responsavel, categoria: demand.categoria,
-        prioridade: demand.prioridade, prazo: demand.prazo ?? '', observacoes: demand.observacoes,
+        prioridade: demand.prioridade, prazo: demand.prazo ?? '',
       });
     } else {
       setForm({ titulo: '', descricao: '', cliente: '', responsavel: '',
-        categoria: '', prioridade: 'Média', prazo: '', observacoes: '' });
+        categoria: '', prioridade: 'Média', prazo: '' });
     }
   }, [demand, open]);
 
@@ -288,21 +288,7 @@ export default function DemandModal({
             />
           </div>
 
-          {/* Observations */}
-          <div>
-            <label className="field-label flex items-center gap-1.5">
-              <MessageSquare size={13} style={{ color: 'rgba(255,255,255,0.45)' }} />
-              Observações
-            </label>
-            <textarea
-              value={form.observacoes}
-              onChange={e => update('observacoes', e.target.value)}
-              rows={2}
-              placeholder="Observações adicionais…"
-              className="input-premium resize-none"
-              style={{ paddingTop: '10px', paddingBottom: '10px' }}
-            />
-          </div>
+
 
           {/* ── Actions ── */}
           <div

@@ -20,10 +20,15 @@ export default function App() {
   const [editingDemand, setEditingDemand] = useState<Demand | null>(null);
 
   const { demands, loading, error, fetchDemands, createDemand, updateDemand, deleteDemand, moveDemand, handleWsMessage } = useDemands();
-  const { stats } = useStats();
+  const { stats, refetch: refetchStats } = useStats();
   const clock = useClock();
 
-  useWebSocket(handleWsMessage);
+  const onWsMessage = useCallback((msg: { type: string; data: unknown }) => {
+    handleWsMessage(msg);
+    refetchStats();
+  }, [handleWsMessage, refetchStats]);
+
+  useWebSocket(onWsMessage);
 
   useEffect(() => {
     if (tvMode) {
@@ -128,31 +133,57 @@ export default function App() {
 
       {tvMode && (
         <div
-          className="shrink-0 flex items-center justify-between px-6 py-3"
+          className="shrink-0 flex items-center justify-between px-6 py-3 gap-4"
           style={{
-            background: 'rgba(12,15,20,0.97)',
-            borderBottom: '1px solid rgba(255,255,255,0.07)',
+            background: 'rgba(12,15,20,0.98)',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
           }}
         >
           <img
             src="/logo.png"
             alt="ARKA"
-            style={{ height: '36px', filter: 'brightness(0) invert(1)' }}
+            style={{ height: '40px', filter: 'brightness(0) invert(1)' }}
           />
-          <div className="flex items-center gap-4">
-            {stats && (
-              <div className="flex items-center gap-3">
-                <div className="text-center px-3">
-                  <div className="text-2xl font-bold text-glow-blue">{stats.abertas}</div>
-                  <div className="text-xs text-white/40">Abertas</div>
+
+          {/* TV Mode Stat Counters: No card bg, neon glowing numbers, straight vertical bar | separators */}
+          {stats && (
+            <div className="flex items-center justify-center flex-1 max-w-6xl mx-auto px-4">
+              {[
+                { label: 'Novas',        value: stats.novas,       color: '#0066FF' },
+                { label: 'Em andamento', value: stats.emAndamento, color: '#8B5CF6' },
+                { label: 'Aguardando',   value: stats.aguardando,  color: '#F59E0B' },
+                { label: 'Em revisão',   value: stats.emRevisao,   color: '#06B6D4' },
+                { label: 'Concluídas',   value: stats.concluidas,  color: '#22C55E' },
+                { label: 'Hoje',         value: stats.hoje,        color: '#60A5FA' },
+                { label: 'Semana',       value: stats.semana,      color: '#A78BFA' },
+              ].map((card, i, arr) => (
+                <div key={i} className="flex items-center">
+                  <div className="flex flex-col items-center justify-center text-center px-3 xl:px-5">
+                    <span
+                      className="text-3xl xl:text-4xl font-extrabold tabular-nums leading-tight"
+                      style={{
+                        color: card.color,
+                        textShadow: `0 0 16px ${card.color}, 0 0 32px ${card.color}80`,
+                      }}
+                    >
+                      {card.value}
+                    </span>
+                    <span className="text-[11px] xl:text-xs font-semibold text-white/60 whitespace-nowrap mt-0.5 tracking-wide">
+                      {card.label}
+                    </span>
+                  </div>
+                  {i < arr.length - 1 && (
+                    <div
+                      className="h-8 xl:h-10 w-[1.5px] shrink-0"
+                      style={{ background: 'rgba(255, 255, 255, 0.2)' }}
+                    />
+                  )}
                 </div>
-                <div className="w-px h-8 bg-white/10" />
-                <div className="text-center px-3">
-                  <div className="text-2xl font-bold text-glow-green">{stats.concluidasHoje}</div>
-                  <div className="text-xs text-white/40">Hoje</div>
-                </div>
-              </div>
-            )}
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-4 shrink-0">
             <div className="text-right">
               <div className="text-3xl font-bold tabular-nums text-white">{clock.time}</div>
               <div className="text-xs text-white/30 capitalize">{clock.date}</div>
@@ -162,7 +193,7 @@ export default function App() {
               className="w-10 h-10 rounded-xl flex items-center justify-center hover:bg-white/5 transition-colors"
               style={{ color: 'rgba(255,255,255,0.4)' }}
             >
-              <X size={18} />
+              <X size={20} />
             </button>
           </div>
         </div>
@@ -196,7 +227,7 @@ export default function App() {
               />
             )}
             {!tvMode && activeView === 'dashboard' && (
-              <Dashboard stats={stats} tvMode={tvMode} />
+              <Dashboard stats={stats} />
             )}
             {!tvMode && activeView === 'historico' && (
               <History stats={stats} tvMode={tvMode} />

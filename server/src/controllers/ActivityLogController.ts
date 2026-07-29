@@ -30,7 +30,7 @@ export class ActivityLogController {
 
   getByDemandId = (req: Request, res: Response) => {
     try {
-      const { demandId } = req.params;
+      const demandId = String(req.params.demandId);
       const logs = this.repo.findByDemandId(demandId);
       res.json(logs);
     } catch (error) {

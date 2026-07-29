@@ -1,16 +1,24 @@
 import { useState } from 'react';
 import {
   Globe, Sun, CalendarDays, Calendar, TrendingUp,
-  BarChart2, ClipboardList, Settings2, CheckCircle2,
-  Target, Filter, Download, User, Folder,
+  Filter, Download, Clock, CheckCircle2,
 } from 'lucide-react';
-import type { Stats, StatsFilter, Priority } from '../../types';
-import { PRIORITIES } from '../../types';
+import type { Stats, StatsFilter } from '../../types';
 import { api } from '../../api';
+import { exportDashboardPdf } from '../../utils/pdfExport';
+import {
+  ChartCard,
+  StatusDoughnutChart,
+  CreatedPerDayChart,
+  CreatedPerWeekChart,
+  CreatedPerMonthChart,
+  CompletionGaugeChart,
+  EvolutionChart,
+  ComparisonChart,
+} from './ChartComponents';
 
 interface DashboardProps {
   stats: Stats | null;
-  tvMode?: boolean;
 }
 
 const PERIOD_OPTIONS = [
@@ -21,30 +29,35 @@ const PERIOD_OPTIONS = [
   { id: 'year',  label: 'Ano',    Icon: TrendingUp },
 ] as const;
 
-function buildStatCards(s: Stats) {
-  return [
-    { label: 'Total de Demandas',    value: s.total,              color: '#4D94FF', Icon: BarChart2,    bg: 'rgba(0,102,255,0.1)'  },
-    { label: 'Demandas Abertas',     value: s.abertas,            color: '#4D94FF', Icon: ClipboardList,bg: 'rgba(0,102,255,0.1)'  },
-    { label: 'Em Andamento',         value: s.emAndamento,        color: '#A78BFA', Icon: Settings2,    bg: 'rgba(139,92,246,0.1)' },
-    { label: 'Concluídas Total',     value: s.concluidas,         color: '#4ADE80', Icon: CheckCircle2, bg: 'rgba(34,197,94,0.1)'  },
-    { label: 'Concluídas Hoje',      value: s.concluidasHoje,     color: '#4ADE80', Icon: Target,       bg: 'rgba(34,197,94,0.1)'  },
-    { label: 'Concluídas na Semana', value: s.concluidasSemana,   color: '#22D3EE', Icon: TrendingUp,   bg: 'rgba(6,182,212,0.1)'  },
-    { label: 'Concluídas no Mês',    value: s.concluidasMes,      color: '#22D3EE', Icon: CalendarDays, bg: 'rgba(6,182,212,0.1)'  },
-    { label: 'Tempo Médio',          value: `${s.tempoMedioResolucao}d`, color: '#FCD34D', Icon: Filter, bg: 'rgba(234,179,8,0.1)' },
-  ];
-}
-
-export default function Dashboard({ stats, tvMode }: DashboardProps) {
-  const [filter, setFilter]           = useState<StatsFilter>({ period: 'all' });
-  const [filteredStats, setFiltered]  = useState<Stats | null>(null);
-  const [loading, setLoading]         = useState(false);
+export default function Dashboard({ stats }: DashboardProps) {
+  const [filter, setFilter]          = useState<StatsFilter>({ period: 'all' });
+  const [filteredStats, setFiltered] = useState<Stats | null>(null);
+  const [loading, setLoading]        = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const S = filteredStats ?? stats;
 
-  const applyFilter = async () => {
+  const handlePeriodChange = async (period: StatsFilter['period']) => {
+    setFilter({ period });
     setLoading(true);
-    try { setFiltered(await api.getStats(filter)); }
-    finally { setLoading(false); }
+    try {
+      const data = await api.getStats({ period });
+      setFiltered(data);
+    } catch (err) {
+      console.error('Erro ao buscar estatísticas:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePdfExport = async () => {
+    setExportingPdf(true);
+    try {
+      const currentOpt = PERIOD_OPTIONS.find(p => p.id === filter.period);
+      await exportDashboardPdf(S, currentOpt?.label || 'Todos');
+    } finally {
+      setExportingPdf(false);
+    }
   };
 
   if (!S) return (
@@ -59,390 +72,211 @@ export default function Dashboard({ stats, tvMode }: DashboardProps) {
     </div>
   );
 
-  const cards = buildStatCards(S);
+  // Top Minimalist Stat Cards (No icons, Big number on top, text below)
+  const topCards = [
+    { label: 'Novas',             value: S.novas,       color: '#0066FF' },
+    { label: 'Em andamento',      value: S.emAndamento, color: '#8B5CF6' },
+    { label: 'Aguardando',        value: S.aguardando,  color: '#F59E0B' },
+    { label: 'Em revisão',        value: S.emRevisao,   color: '#06B6D4' },
+    { label: 'Concluídas',        value: S.concluidas,  color: '#22C55E' },
+    { label: 'Hoje',              value: S.hoje,        color: '#60A5FA' },
+    { label: 'Semana',            value: S.semana,      color: '#A78BFA' },
+    { label: 'Total de demandas', value: S.total,       color: '#F43F5E' },
+  ];
 
   return (
     <div className="h-full overflow-y-auto">
-      <div style={{ padding: tvMode ? '24px 28px' : '16px 20px', display: 'flex', flexDirection: 'column', gap: tvMode ? '20px' : '14px' }}>
+      <div className="p-4 md:p-6 flex flex-col gap-6 max-w-[1700px] mx-auto w-full" id="dashboard-container">
 
-        {/* ── Filter bar ── */}
+        {/* ── Responsive Professional Toolbar ── */}
         <div
-          className="rounded-2xl"
+          className="rounded-2xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-4 w-full"
           style={{
             background: 'rgba(21,25,34,0.88)',
-            border: '1px solid rgba(255,255,255,0.07)',
-            padding: '14px 18px',
-            display: 'flex',
-            flexWrap: 'wrap',
-            alignItems: 'center',
-            gap: '10px',
+            border: '1px solid rgba(255,255,255,0.08)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.25)',
+            backdropFilter: 'blur(12px)',
           }}
         >
-          {/* Period tabs */}
-          <div className="flex gap-1.5 flex-wrap">
-            {PERIOD_OPTIONS.map(p => (
-              <button
-                key={p.id}
-                onClick={() => setFilter(prev => ({ ...prev, period: p.id }))}
-                className={`period-tab ${filter.period === p.id ? 'active' : ''}`}
-                style={{ fontSize: tvMode ? '0.9rem' : '0.8rem', padding: tvMode ? '8px 16px' : '6px 12px' }}
-              >
-                <p.Icon size={13} />
-                {p.label}
-              </button>
-            ))}
+          {/* Period selector tabs */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-semibold text-white/40 flex items-center gap-1.5 mr-1">
+              <Filter size={14} className="text-arka-blue" /> Período:
+            </span>
+            <div className="flex gap-1.5 flex-wrap">
+              {PERIOD_OPTIONS.map(p => {
+                const isActive = filter.period === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => handlePeriodChange(p.id)}
+                    disabled={loading}
+                    className={`flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-xl font-medium transition-all duration-200 ${
+                      isActive
+                        ? 'bg-arka-blue text-white shadow-lg shadow-blue-500/25 border border-blue-400/30'
+                        : 'bg-white/5 text-white/60 hover:text-white hover:bg-white/10 border border-white/5'
+                    }`}
+                  >
+                    <p.Icon size={14} />
+                    {p.label}
+                  </button>
+                );
+              })}
+            </div>
+            {loading && (
+              <div className="w-4 h-4 border-2 border-arka-blue/30 border-t-arka-blue rounded-full animate-spin ml-2" />
+            )}
           </div>
 
-          {/* Selects */}
-          <div className="flex gap-2 flex-wrap">
-            <select
-              value={filter.responsavel ?? ''}
-              onChange={e => setFilter(prev => ({ ...prev, responsavel: e.target.value || undefined }))}
-              className="select-premium"
-              style={{ minWidth: '150px', height: '36px', fontSize: '0.8rem', padding: '0 32px 0 12px' }}
+          {/* Export buttons */}
+          <div className="flex items-center gap-2 justify-end shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+            <span className="text-xs font-semibold text-white/40 hidden md:inline mr-1">
+              Exportar:
+            </span>
+            <a
+              href={api.exportUrl('csv')}
+              className="flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-xl font-semibold bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 transition-all duration-200"
             >
-              <option value="">Todos responsáveis</option>
-              {stats?.porResponsavel.map(r => (
-                <option key={r.responsavel} value={r.responsavel}>{r.responsavel}</option>
-              ))}
-            </select>
-            <select
-              value={filter.categoria ?? ''}
-              onChange={e => setFilter(prev => ({ ...prev, categoria: e.target.value || undefined }))}
-              className="select-premium"
-              style={{ minWidth: '150px', height: '36px', fontSize: '0.8rem', padding: '0 32px 0 12px' }}
+              <Download size={13} className="text-arka-blue" />
+              CSV
+            </a>
+            <a
+              href={api.exportUrl('excel')}
+              className="flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-xl font-semibold bg-white/5 hover:bg-white/10 text-white/70 hover:text-white border border-white/10 transition-all duration-200"
             >
-              <option value="">Todas categorias</option>
-              {stats?.porCategoria.map(c => (
-                <option key={c.categoria} value={c.categoria}>{c.categoria}</option>
-              ))}
-            </select>
-            <select
-              value={filter.prioridade ?? ''}
-              onChange={e => setFilter(prev => ({ ...prev, prioridade: (e.target.value || undefined) as Priority | undefined }))}
-              className="select-premium"
-              style={{ minWidth: '150px', height: '36px', fontSize: '0.8rem', padding: '0 32px 0 12px' }}
+              <Download size={13} className="text-arka-blue" />
+              EXCEL
+            </a>
+            <button
+              onClick={handlePdfExport}
+              disabled={exportingPdf}
+              className="flex items-center gap-1.5 text-xs px-3.5 py-2 rounded-xl font-semibold bg-blue-600/25 hover:bg-blue-600/40 text-blue-200 border border-blue-500/40 transition-all duration-200 shadow-lg shadow-blue-500/10"
             >
-              <option value="">Todas prioridades</option>
-              {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-
-          <button
-            onClick={applyFilter}
-            disabled={loading}
-            className="btn-primary disabled:opacity-50 flex items-center gap-1.5"
-            style={{ height: '36px', padding: '0 18px', fontSize: '0.8rem', gap: '6px' }}
-          >
-            {loading
-              ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"/>Filtrando…</>
-              : <><Filter size={14} /> Aplicar</>
-            }
-          </button>
-
-          {/* Export */}
-          <div className="ml-auto flex gap-1.5">
-            {(['csv', 'excel', 'pdf'] as const).map(fmt => (
-              <a
-                key={fmt}
-                href={api.exportUrl(fmt)}
-                className="btn-secondary flex items-center gap-1.5"
-                style={{ height: '36px', padding: '0 12px', fontSize: '0.75rem', gap: '5px' }}
-              >
-                <Download size={13} />
-                {fmt.toUpperCase()}
-              </a>
-            ))}
+              {exportingPdf ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
+                  Gerando PDF...
+                </>
+              ) : (
+                <>
+                  <Download size={13} className="text-blue-400" />
+                  PDF (Com Gráficos)
+                </>
+              )}
+            </button>
           </div>
         </div>
 
-        {/* ── Stat Cards Grid ── */}
-        <div className={`grid gap-3 ${tvMode ? 'grid-cols-2 lg:grid-cols-4' : 'grid-cols-2 md:grid-cols-4'}`}>
-          {cards.map((card, i) => (
+        {/* ── Top Minimalist Stat Cards Grid (8 Cards) ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+          {topCards.map((card, i) => (
             <div
               key={i}
-              className="stat-card-glow rounded-2xl cursor-default"
-              style={{
-                '--glow-color': card.bg,
-                background: 'rgba(21,25,34,0.9)',
-                border: '1px solid rgba(255,255,255,0.07)',
-                boxShadow: '0 2px 16px rgba(0,0,0,0.35)',
-                padding: tvMode ? '20px 20px' : '16px 18px',
-                animationDelay: `${i * 0.05}s`,
-              } as React.CSSProperties}
+              className="flex flex-col items-center justify-center p-4 rounded-xl border border-white/10 bg-[#151922]/90 shadow-md hover:border-white/20 transition-all duration-200"
+              style={{ minHeight: '96px' }}
             >
-              <div className="flex items-start justify-between mb-3">
-                <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center"
-                  style={{ background: card.bg, border: `1px solid ${card.color}25` }}
-                >
-                  <card.Icon size={18} style={{ color: card.color }} />
-                </div>
-              </div>
-              <div
-                className="font-bold leading-none mb-1.5 tabular-nums animate-number-count"
+              <span
+                className="text-3xl font-extrabold tabular-nums tracking-tight mb-1"
                 style={{
-                  fontSize: tvMode ? '3rem' : '2.25rem',
                   color: card.color,
-                  textShadow: `0 0 24px ${card.color}45`,
+                  textShadow: `0 0 14px ${card.color}70`,
                 }}
               >
                 {card.value}
-              </div>
-              <p
-                className="font-medium"
-                style={{ fontSize: tvMode ? '0.85rem' : '0.75rem', color: 'rgba(255,255,255,0.45)' }}
-              >
+              </span>
+              <span className="text-xs font-semibold text-white/50 truncate max-w-full text-center">
                 {card.label}
-              </p>
+              </span>
             </div>
           ))}
         </div>
 
-        {/* ── Charts Row 1 ── */}
-        <div className={`grid gap-3 ${tvMode ? 'grid-cols-1 lg:grid-cols-3' : 'grid-cols-1 md:grid-cols-3'}`}>
-          <PremiumBarChart title="Por Responsável" LucideIcon={User} color="#4D94FF"
-            data={S.porResponsavel.map(r => ({ label: r.responsavel, value: r.count }))}
-            tvMode={tvMode} />
-          <PremiumBarChart title="Por Categoria" LucideIcon={Folder} color="#A78BFA"
-            data={S.porCategoria.map(c => ({ label: c.categoria, value: c.count }))}
-            tvMode={tvMode} />
-          <PremiumBarChart title="Por Prioridade" LucideIcon={Target} color="#FCD34D"
-            data={S.porPrioridade.map(p => ({
-              label: p.prioridade, value: p.count,
-              customColor: p.prioridade === 'Urgente' ? '#F87171'
-                         : p.prioridade === 'Alta'    ? '#FB923C'
-                         : p.prioridade === 'Média'   ? '#FCD34D'
-                         : '#4ADE80',
-            }))}
-            tvMode={tvMode} />
+        {/* ── SLA & Performance Summary Row ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="p-4 rounded-xl bg-[#151922]/80 border border-white/10 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+              <Clock className="text-amber-400" size={22} />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-amber-400 tabular-nums">{S.tempoMedioResolucao} dias</div>
+              <div className="text-xs text-white/40">Tempo médio de resolução</div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-[#151922]/80 border border-white/10 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+              <Clock className="text-blue-400" size={22} />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-blue-400 tabular-nums">{S.tempoMedioAtendimento}h</div>
+              <div className="text-xs text-white/40">Tempo médio de atendimento</div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-[#151922]/80 border border-white/10 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="text-emerald-400" size={22} />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-emerald-400 tabular-nums">{S.taxaConclusao}%</div>
+              <div className="text-xs text-white/40">Taxa de conclusão geral</div>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-[#151922]/80 border border-white/10 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0">
+              <TrendingUp className="text-indigo-400" size={22} />
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-indigo-400 tabular-nums">{S.abertas}</div>
+              <div className="text-xs text-white/40">Demandas ativas / abertas</div>
+            </div>
+          </div>
         </div>
 
-        {/* ── Charts Row 2 ── */}
-        <div className={`grid gap-3 ${tvMode ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 md:grid-cols-2'}`}>
-          <PremiumBarChart title="Criadas por Dia (30 dias)" LucideIcon={TrendingUp} color="#4D94FF"
-            data={S.criadasPorDia.map(d => ({ label: d.dia.slice(5), value: d.count }))}
-            tvMode={tvMode} />
-          <PremiumBarChart title="Concluídas por Dia (30 dias)" LucideIcon={CheckCircle2} color="#4ADE80"
-            data={S.concluidasPorDia.map(d => ({ label: d.dia.slice(5), value: d.count }))}
-            tvMode={tvMode} />
+        {/* ── Main Chart Grid ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          {/* Chart 1: Demandas por Status (Doughnut) */}
+          <ChartCard title="Demandas por Status" subtitle="Distribuição por etapa do Help Desk">
+            <StatusDoughnutChart data={S.porStatus} />
+          </ChartCard>
+
+          {/* Chart 2: Demandas Criadas por Dia (Line Chart) */}
+          <ChartCard title="Demandas Criadas por Dia" subtitle="Histórico dos últimos 30 dias">
+            <CreatedPerDayChart data={S.criadasPorDia} />
+          </ChartCard>
+
+          {/* Chart 3: Taxa de Conclusão (Gauge Chart) */}
+          <ChartCard title="Taxa de Conclusão" subtitle="Proporção de chamados resolvidos">
+            <CompletionGaugeChart rate={S.taxaConclusao} concluidas={S.concluidas} total={S.total} />
+          </ChartCard>
         </div>
 
-        {/* ── Ranking ── */}
-        <div className={`grid gap-3 ${tvMode ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 md:grid-cols-2'}`}>
-          <RankingPanel
-            title="Ranking por Responsável"
-            LucideIcon={User}
-            data={S.porResponsavel.sort((a, b) => b.count - a.count)}
-            labelKey="responsavel"
-            tvMode={tvMode}
-          />
-          <RankingPanel
-            title="Ranking por Categoria"
-            LucideIcon={Folder}
-            data={S.porCategoria.sort((a, b) => b.count - a.count)}
-            labelKey="categoria"
-            tvMode={tvMode}
-          />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Chart 4: Demandas Criadas por Semana (Bar Chart) */}
+          <ChartCard title="Demandas Criadas por Semana" subtitle="Volume nas últimas 8 semanas">
+            <CreatedPerWeekChart data={S.criadasPorSemana} />
+          </ChartCard>
+
+          {/* Chart 5: Demandas Criadas por Mês (Bar Chart) */}
+          <ChartCard title="Demandas Criadas por Mês" subtitle="Comparativo mensal">
+            <CreatedPerMonthChart data={S.criadasPorMes} />
+          </ChartCard>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          {/* Chart 6: Evolução das Demandas (Acumulado) */}
+          <ChartCard title="Evolução das Demandas" subtitle="Acumulado vs. novas entradas">
+            <EvolutionChart data={S.evolucaoDemandas} />
+          </ChartCard>
+
+          {/* Chart 7: Comparativo Abertas x Concluídas */}
+          <ChartCard title="Comparativo Abertas vs. Concluídas" subtitle="Desempenho diário de fechamento">
+            <ComparisonChart data={S.comparativoAbertasConcluidas} />
+          </ChartCard>
         </div>
 
       </div>
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════
-   PremiumBarChart
-══════════════════════════════════════ */
-function PremiumBarChart({
-  title, LucideIcon, data, color, tvMode,
-}: {
-  title: string;
-  LucideIcon: React.ElementType;
-  data: { label: string; value: number; customColor?: string }[];
-  color: string;
-  tvMode?: boolean;
-}) {
-  const max = Math.max(...data.map(d => d.value), 1);
-
-  return (
-    <div
-      className="rounded-2xl"
-      style={{
-        background: 'rgba(21,25,34,0.88)',
-        border: '1px solid rgba(255,255,255,0.07)',
-        boxShadow: '0 2px 16px rgba(0,0,0,0.3)',
-        padding: tvMode ? '18px 18px' : '14px 16px',
-      }}
-    >
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{ background: `${color}15`, border: `1px solid ${color}28` }}
-        >
-          <LucideIcon size={16} style={{ color }} />
-        </div>
-        <h3
-          className="font-bold"
-          style={{ fontSize: tvMode ? '0.95rem' : '0.82rem', color: 'rgba(255,255,255,0.85)' }}
-        >
-          {title}
-        </h3>
-      </div>
-
-      {data.length === 0 ? (
-        <div className="flex items-center justify-center py-8">
-          <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.8rem' }}>Sem dados</p>
-        </div>
-      ) : (
-        <div className="space-y-2.5">
-          {data.slice(0, 8).map((item, i) => {
-            const pct = Math.round((item.value / max) * 100);
-            const barColor = item.customColor ?? color;
-            return (
-              <div key={i} style={{ animationDelay: `${i * 0.06}s` }}>
-                <div className="flex items-center justify-between mb-1">
-                  <span
-                    className="truncate font-medium"
-                    style={{
-                      fontSize: tvMode ? '0.8rem' : '0.72rem',
-                      color: 'rgba(255,255,255,0.65)',
-                      maxWidth: '65%',
-                    }}
-                  >
-                    {item.label}
-                  </span>
-                  <span
-                    className="font-bold tabular-nums"
-                    style={{ fontSize: tvMode ? '0.85rem' : '0.75rem', color: barColor }}
-                  >
-                    {item.value}
-                  </span>
-                </div>
-                <div
-                  className="rounded-full overflow-hidden"
-                  style={{ height: tvMode ? '7px' : '5px', background: 'rgba(255,255,255,0.06)' }}
-                >
-                  <div
-                    className="h-full rounded-full chart-bar"
-                    style={{
-                      width: `${pct}%`,
-                      background: `linear-gradient(90deg, ${barColor}, ${barColor}99)`,
-                      boxShadow: `0 0 8px ${barColor}40`,
-                      animationDelay: `${i * 0.07}s`,
-                    }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ══════════════════════════════════════
-   RankingPanel
-══════════════════════════════════════ */
-const RANK_COLORS = ['#FCD34D', '#94A3B8', '#FB923C'];
-
-function RankingPanel({
-  title, LucideIcon, data, labelKey, tvMode,
-}: {
-  title: string;
-  LucideIcon: React.ElementType;
-  data: { [key: string]: string | number }[];
-  labelKey: string;
-  tvMode?: boolean;
-}) {
-  const max = Math.max(...data.map(d => d.count as number), 1);
-
-  return (
-    <div
-      className="rounded-2xl"
-      style={{
-        background: 'rgba(21,25,34,0.88)',
-        border: '1px solid rgba(255,255,255,0.07)',
-        boxShadow: '0 2px 16px rgba(0,0,0,0.3)',
-        padding: tvMode ? '18px 18px' : '14px 16px',
-      }}
-    >
-      <div className="flex items-center gap-2 mb-4">
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{ background: 'rgba(252,211,77,0.12)', border: '1px solid rgba(252,211,77,0.22)' }}
-        >
-          <LucideIcon size={16} style={{ color: '#FCD34D' }} />
-        </div>
-        <h3
-          className="font-bold"
-          style={{ fontSize: tvMode ? '0.95rem' : '0.82rem', color: 'rgba(255,255,255,0.85)' }}
-        >
-          {title}
-        </h3>
-      </div>
-
-      {data.length === 0 ? (
-        <div className="flex items-center justify-center py-8">
-          <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.8rem' }}>Sem dados</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {data.slice(0, 6).map((item, i) => {
-            const pct = Math.round(((item.count as number) / max) * 100);
-            const medal = i < 3 ? ['1°', '2°', '3°'][i] : `${i + 1}°`;
-            const rankColor = RANK_COLORS[i] ?? '#4D94FF';
-            return (
-              <div
-                key={i}
-                className="ranking-row"
-                style={{ animationDelay: `${i * 0.06}s` }}
-              >
-                {/* Rank */}
-                <span
-                  className="shrink-0 w-7 text-center font-bold"
-                  style={{ fontSize: tvMode ? '1.1rem' : '0.95rem' }}
-                >
-                  {medal}
-                </span>
-
-                {/* Name + bar */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-1 gap-2">
-                    <span
-                      className="truncate font-semibold"
-                      style={{ fontSize: tvMode ? '0.85rem' : '0.75rem', color: 'rgba(255,255,255,0.8)' }}
-                    >
-                      {item[labelKey] as string}
-                    </span>
-                    <span
-                      className="font-bold tabular-nums shrink-0"
-                      style={{ fontSize: tvMode ? '0.85rem' : '0.75rem', color: rankColor }}
-                    >
-                      {item.count as number}
-                    </span>
-                  </div>
-                  <div
-                    className="rounded-full overflow-hidden"
-                    style={{ height: '4px', background: 'rgba(255,255,255,0.06)' }}
-                  >
-                    <div
-                      className="h-full rounded-full chart-bar"
-                      style={{
-                        width: `${pct}%`,
-                        background: `linear-gradient(90deg, ${rankColor}, ${rankColor}88)`,
-                        animationDelay: `${i * 0.08}s`,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
