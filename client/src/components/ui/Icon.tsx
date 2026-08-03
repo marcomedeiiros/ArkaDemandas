@@ -90,6 +90,11 @@ const LucideIcons = {
 
 export type IconName = keyof typeof LucideIcons;
 
+// Garante um ícone válido: colunas custom podem trazer um nome desconhecido.
+export function safeIconName(name: string): IconName {
+  return (name in LucideIcons ? name : 'clipboard') as IconName;
+}
+
 interface IconProps extends Omit<LucideProps, 'ref'> {
   name: IconName;
   size?: number;

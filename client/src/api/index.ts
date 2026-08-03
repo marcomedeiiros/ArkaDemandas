@@ -2,13 +2,22 @@ import type { Demand, CreateDemandDTO, Stats, StatsFilter, ActivityLog, ColumnSt
 
 const BASE = '/api';
 
+// Usuário logado atual enviado no header X-User para atribuir as ações
+// (criar/mover/editar/excluir demandas) ao colaborador correto nos logs.
+let currentUser = 'Sistema';
+
+export function setApiUser(userName: string | undefined) {
+  currentUser = userName || 'Sistema';
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 8000);
 
   try {
     const res = await fetch(`${BASE}${url}`, {
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-User': currentUser },
+      credentials: 'include', // Envia cookies de sessão automaticamente
       signal: controller.signal,
       ...options,
     });

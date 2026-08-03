@@ -3,9 +3,19 @@ import { DemandService } from '../services/demandService.js';
 import type { CreateDemandInput, UpdateDemandInput } from '../models/Demand.model.js';
 import type { ColumnStatus } from '../types.js';
 import { broadcastWs } from '../websocket.js';
+import { queryOne } from '../database.js';
+import { getSessionUser } from '../auth/session.js';
+import type { DemandModel } from '../models/Demand.model.js';
 
 export class DemandController {
   private service: DemandService;
+
+  // Pode gerenciar (editar/duplicar/excluir): o criador OU um admin/supervisor.
+  private isOwner(demand: DemandModel, req: Request): boolean {
+    const user = getSessionUser(req);
+    if (!user) return false;
+    return user.role === 'admin' || demand.criado_por === user.name;
+  }
 
   constructor() {
     this.service = new DemandService();
@@ -44,14 +54,23 @@ export class DemandController {
 
   create = (req: Request, res: Response) => {
     try {
-      const user = (req.headers['x-user'] as string) || 'Sistema';
+      const user = getSessionUser(req)?.name || 'Sistema';
+      // Responsável = técnico atribuído (do formulário) ou, se vazio, o criador.
+      const responsavel = (req.body?.responsavel && String(req.body.responsavel).trim()) || user;
       const data: CreateDemandInput = {
         ...req.body,
+        responsavel,
         criado_por: user,
       };
 
-      if (!data.titulo || !data.cliente || !data.responsavel || !data.categoria || !data.prioridade) {
+      if (!data.titulo || !data.cliente || !data.categoria || !data.prioridade) {
         return res.status(400).json({ error: 'Campos obrigatórios faltando' });
+      }
+
+      // Não permite criar demandas se não houver nenhum bloco/coluna.
+      const columnCount = queryOne<{ count: number }>('SELECT COUNT(*) AS count FROM columns');
+      if (!columnCount || columnCount.count === 0) {
+        return res.status(400).json({ error: 'Crie pelo menos um bloco antes de criar demandas' });
       }
 
       const demand = this.service.createDemand(data);
@@ -66,8 +85,16 @@ export class DemandController {
   update = (req: Request, res: Response) => {
     try {
       const id = String(req.params.id);
-      const user = (req.headers['x-user'] as string) || 'Sistema';
+      const user = getSessionUser(req)?.name || 'Sistema';
       const data: UpdateDemandInput = req.body;
+
+      const existing = this.service.getDemandById(id);
+      if (!existing) {
+        return res.status(404).json({ error: 'Demanda não encontrada' });
+      }
+      if (!this.isOwner(existing, req)) {
+        return res.status(403).json({ error: 'Apenas quem criou a demanda pode editá-la' });
+      }
 
       const demand = this.service.updateDemand(id, data, user);
 
@@ -87,7 +114,7 @@ export class DemandController {
     try {
       const id = String(req.params.id);
       const { status } = req.body as { status: ColumnStatus };
-      const user = (req.headers['x-user'] as string) || 'Sistema';
+      const user = getSessionUser(req)?.name || 'Sistema';
 
       if (!status) {
         return res.status(400).json({ error: 'Status é obrigatório' });
@@ -110,7 +137,7 @@ export class DemandController {
   complete = (req: Request, res: Response) => {
     try {
       const id = String(req.params.id);
-      const user = (req.headers['x-user'] as string) || 'Sistema';
+      const user = getSessionUser(req)?.name || 'Sistema';
 
       const demand = this.service.completeDemand(id, user);
 
@@ -129,7 +156,15 @@ export class DemandController {
   duplicate = (req: Request, res: Response) => {
     try {
       const id = String(req.params.id);
-      const user = (req.headers['x-user'] as string) || 'Sistema';
+      const user = getSessionUser(req)?.name || 'Sistema';
+
+      const existing = this.service.getDemandById(id);
+      if (!existing) {
+        return res.status(404).json({ error: 'Demanda não encontrada' });
+      }
+      if (!this.isOwner(existing, req)) {
+        return res.status(403).json({ error: 'Apenas quem criou a demanda pode duplicá-la' });
+      }
 
       const demand = this.service.duplicateDemand(id, user);
 
@@ -148,7 +183,15 @@ export class DemandController {
   delete = (req: Request, res: Response) => {
     try {
       const id = String(req.params.id);
-      const user = (req.headers['x-user'] as string) || 'Sistema';
+      const user = getSessionUser(req)?.name || 'Sistema';
+
+      const existing = this.service.getDemandById(id);
+      if (!existing) {
+        return res.status(404).json({ error: 'Demanda não encontrada' });
+      }
+      if (!this.isOwner(existing, req)) {
+        return res.status(403).json({ error: 'Apenas quem criou a demanda pode excluí-la' });
+      }
 
       const success = this.service.deleteDemand(id, user);
 

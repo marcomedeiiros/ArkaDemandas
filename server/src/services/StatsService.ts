@@ -112,13 +112,17 @@ export class StatsService {
     const total = demands.length;
     const taxaConclusao = total > 0 ? Math.round((concluidas / total) * 100) : 0;
 
-    const porStatus = [
-      { status: 'novas', label: 'Novas', count: novas },
-      { status: 'em_andamento', label: 'Em andamento', count: emAndamento },
-      { status: 'aguardando', label: 'Aguardando', count: aguardando },
-      { status: 'em_revisao', label: 'Em revisão', count: emRevisao },
-      { status: 'concluidas', label: 'Concluídas', count: concluidas },
-    ];
+    // Distribuição por bloco/coluna real (dinâmico), respeitando os filtros
+    // já aplicados em `demands`. Antes era fixo nos 5 status padrão.
+    const columns = queryAll<{ id: string; label: string; color: string; order_index: number }>(
+      'SELECT id, label, color, order_index FROM columns ORDER BY order_index ASC'
+    );
+    const porStatus = columns.map(col => ({
+      status: col.id,
+      label: col.label,
+      color: col.color,
+      count: demands.filter(d => d.status === col.id).length,
+    }));
 
     const porResponsavel = this.groupBy(demands, 'responsavel');
     const porCategoria = this.groupBy(demands, 'categoria');

@@ -86,6 +86,45 @@ export async function initDatabase(): Promise<SqlJsDatabase> {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS columns (
+      id TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      color TEXT NOT NULL DEFAULT '#0066FF',
+      icon TEXT NOT NULL DEFAULT 'clipboard',
+      order_index INTEGER NOT NULL DEFAULT 0,
+      is_default INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT,
+      provider TEXT NOT NULL DEFAULT 'local',
+      avatar_url TEXT,
+      cargo TEXT,
+      role TEXT NOT NULL DEFAULT 'member',
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      token TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Os blocos NÃO são mais criados automaticamente. Cada bloco é criado pelo
+  // usuário e salvo no banco (tabela `columns`). Assim a tela inicia sem blocos
+  // padrão "forçados" e reflete exatamente o que existe no banco de dados.
+
   // Migrations for existing database schema compatibility
   try {
     const actCols = queryAll<{ name: string }>('PRAGMA table_info(activity_logs)').map(c => c.name);
@@ -103,6 +142,37 @@ export async function initDatabase(): Promise<SqlJsDatabase> {
     }
   } catch (e) {
     console.error('Error migrating demands table:', e);
+  }
+
+  // Adiciona colunas novas a tabelas users já existentes
+  try {
+    const userCols = queryAll<{ name: string }>('PRAGMA table_info(users)').map(c => c.name);
+    if (userCols.length > 0 && !userCols.includes('cargo')) {
+      db.run('ALTER TABLE users ADD COLUMN cargo TEXT');
+    }
+    if (userCols.length > 0 && !userCols.includes('role')) {
+      db.run("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'member'");
+    }
+  } catch (e) {
+    console.error('Error migrating users table:', e);
+  }
+
+  // Conserta demandas "órfãs": as que têm um status que não corresponde a
+  // nenhum bloco existente (ex.: o bloco foi renomeado/excluído) ficam
+  // invisíveis no Kanban. Move todas para o primeiro bloco (menor order_index).
+  try {
+    const firstColumn = queryOne<{ id: string }>(
+      'SELECT id FROM columns ORDER BY order_index ASC LIMIT 1'
+    );
+    if (firstColumn) {
+      db.run(
+        `UPDATE demands SET status = ?
+         WHERE status NOT IN (SELECT id FROM columns)`,
+        [firstColumn.id]
+      );
+    }
+  } catch (e) {
+    console.error('Error fixing orphaned demands:', e);
   }
 
   saveDatabase();

@@ -20,7 +20,7 @@
     position: relative;
   }
 
-  /* Tech background — hexágonos e circuito a 3% */
+  /* Tech background hexágonos e circuito a 3% */
   body::before {
     content: '';
     position: fixed;

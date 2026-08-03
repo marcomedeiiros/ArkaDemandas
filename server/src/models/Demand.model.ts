@@ -26,7 +26,6 @@ export interface CreateDemandInput {
   categoria: string;
   prioridade: Priority;
   prazo?: string | null;
-  observacoes?: string;
   criado_por: string;
 }
 

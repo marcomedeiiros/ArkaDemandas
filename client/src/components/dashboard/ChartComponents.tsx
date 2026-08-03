@@ -96,19 +96,15 @@ export function ChartCard({ title, subtitle, children, height = 260 }: ChartCard
 }
 
 // 1. Demandas por Status (Doughnut Chart)
-export function StatusDoughnutChart({ data }: { data: { status: string; count: number; label: string }[] }) {
+export function StatusDoughnutChart({ data }: { data: { status: string; count: number; label: string; color?: string }[] }) {
+  // Paleta de reserva caso algum bloco não tenha cor definida.
+  const FALLBACK = ['#0066FF', '#8B5CF6', '#F59E0B', '#06B6D4', '#22C55E', '#F43F5E', '#FB923C', '#A78BFA', '#34D399', '#60A5FA'];
   const chartData = {
     labels: data.map(d => d.label),
     datasets: [
       {
         data: data.map(d => d.count),
-        backgroundColor: [
-          '#0066FF', // Novas
-          '#8B5CF6', // Em andamento
-          '#F59E0B', // Aguardando
-          '#06B6D4', // Em revisão
-          '#22C55E', // Concluídas
-        ],
+        backgroundColor: data.map((d, i) => d.color ?? FALLBACK[i % FALLBACK.length]),
         borderColor: '#151922',
         borderWidth: 3,
         hoverOffset: 6,

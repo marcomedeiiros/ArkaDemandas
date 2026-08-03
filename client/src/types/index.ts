@@ -14,7 +14,7 @@ export interface Demand {
   data_criacao: string;
   prazo: string | null;
   data_conclusao: string | null;
-  observacoes: string;
+  criado_por: string;
   created_at: string;
   updated_at: string;
 }
@@ -26,18 +26,31 @@ export interface ActivityLog {
   details: string;
   from_status: string | null;
   to_status: string | null;
+  user: string | null;
   created_at: string;
+}
+
+export interface Collaborator {
+  id: string;
+  name: string;
+  email: string;
+  provider: string;
+  avatar_url: string | null;
+  cargo: string | null;
+  role: string;
+  created_at: string;
+  actionCount: number;
 }
 
 export interface CreateDemandDTO {
   titulo: string;
   descricao?: string;
   cliente: string;
-  responsavel: string;
+  // Responsável é definido automaticamente pelo servidor (usuário logado).
+  responsavel?: string;
   categoria: string;
   prioridade: Priority;
   prazo?: string | null;
-  observacoes?: string;
 }
 
 export interface Stats {
@@ -57,7 +70,7 @@ export interface Stats {
   tempoMedioResolucao: number;
   tempoMedioAtendimento: number;
   taxaConclusao: number;
-  porStatus: { status: string; count: number; label: string }[];
+  porStatus: { status: string; count: number; label: string; color: string }[];
   porResponsavel: { responsavel: string; count: number }[];
   porCategoria: { categoria: string; count: number }[];
   porPrioridade: { prioridade: string; count: number }[];
@@ -76,13 +89,14 @@ export interface StatsFilter {
   prioridade?: Priority;
 }
 
-export const COLUMNS: { id: ColumnStatus; label: string; color: string }[] = [
-  { id: 'novas', label: 'Novas', color: '#0066FF' },
-  { id: 'em_andamento', label: 'Em andamento', color: '#8B5CF6' },
-  { id: 'aguardando', label: 'Aguardando', color: '#F59E0B' },
-  { id: 'em_revisao', label: 'Em revisão', color: '#06B6D4' },
-  { id: 'concluidas', label: 'Concluídas', color: '#22C55E' },
-];
+export interface ColumnConfig {
+  id: string;
+  label: string;
+  color: string;
+  icon: string;
+  order_index: number;
+  is_default: number;
+}
 
 export const PRIORITIES: Priority[] = ['Baixa', 'Média', 'Alta', 'Urgente'];
 

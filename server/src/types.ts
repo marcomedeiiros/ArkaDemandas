@@ -61,7 +61,7 @@ export interface Stats {
   tempoMedioResolucao: number;
   tempoMedioAtendimento: number;
   taxaConclusao: number;
-  porStatus: Array<{ status: string; count: number; label: string }>;
+  porStatus: Array<{ status: string; count: number; label: string; color: string }>;
   porResponsavel: Array<{ responsavel: string; count: number }>;
   porCategoria: Array<{ categoria: string; count: number }>;
   porPrioridade: Array<{ prioridade: string; count: number }>;

@@ -1,25 +1,50 @@
+import { useState, useRef, useEffect } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import type { Demand, ColumnStatus } from '../../types';
+import type { Demand, ColumnConfig } from '../../types';
 import SortableDemandCard from './SortableDemandCard';
 import { Icon, type IconName } from '../ui/Icon';
 
+const VALID_ICONS: IconName[] = [
+  'search','plus','edit','delete','copy','moreVertical','close','calendar','clock',
+  'folder','user','building','clipboard','activity','flame','checkCircle',
+  'calendarDays','barChart','history','monitor','target','alertTriangle',
+];
+function safeIcon(name: string): IconName {
+  return VALID_ICONS.includes(name as IconName) ? (name as IconName) : 'clipboard';
+}
+
 interface KanbanColumnProps {
-  id: ColumnStatus;
-  label: string;
-  color: string;
-  icon: IconName;
+  column: ColumnConfig;
   demands: Demand[];
   onEdit: (demand: Demand) => void;
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
+  onEditColumn: (column: ColumnConfig) => void;
+  onDeleteColumn: (column: ColumnConfig) => void;
   tvMode?: boolean;
 }
 
 export default function KanbanColumn({
-  id, label, color, icon, demands, onEdit, onDuplicate, onDelete, tvMode,
+  column, demands, onEdit, onDuplicate, onDelete, onEditColumn, onDeleteColumn, tvMode,
 }: KanbanColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({ id });
+  const { setNodeRef, isOver } = useDroppable({ id: column.id });
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const { label, color } = column;
+  const icon = safeIcon(column.icon);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [menuOpen]);
 
   return (
     <div
@@ -91,6 +116,61 @@ export default function KanbanColumn({
         >
           {demands.length}
         </span>
+
+        {/* Column options menu (hidden in tvMode) */}
+        {!tvMode && (
+          <div className="relative" ref={menuRef}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen(!menuOpen);
+              }}
+              className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors ml-0.5"
+              style={{ color: 'rgba(255,255,255,0.35)' }}
+              title="Opções do bloco"
+            >
+              <Icon name="moreVertical" size={14} />
+            </button>
+
+            {menuOpen && (
+              <div
+                className="absolute right-0 top-full mt-1 rounded-xl py-1 z-50 animate-fade-in-scale"
+                style={{
+                  background: 'rgba(18,22,30,0.98)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+                  minWidth: '160px',
+                }}
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    onEditColumn(column);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/5 transition-colors"
+                  style={{ color: 'rgba(255,255,255,0.8)' }}
+                >
+                  <Icon name="edit" size={14} />
+                  Editar bloco
+                </button>
+                <div className="h-px bg-white/5 my-1" />
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    onDeleteColumn(column);
+                  }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-red-500/10 transition-colors"
+                  style={{ color: '#F87171' }}
+                >
+                  <Icon name="delete" size={14} />
+                  Excluir bloco
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div
@@ -120,6 +200,8 @@ export default function KanbanColumn({
               onDuplicate={onDuplicate}
               onDelete={onDelete}
               tvMode={tvMode}
+              statusLabel={label}
+              statusColor={color}
             />
           ))}
         </SortableContext>

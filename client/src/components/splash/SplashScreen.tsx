@@ -30,7 +30,7 @@ export default function SplashScreen({ onComplete }: SplashScreenProps) {
       clearTimeout(completeTimer);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once only — onComplete is accessed via ref
+  }, []); // run once only onComplete is accessed via ref
 
   return (
     <div

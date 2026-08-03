@@ -1,34 +1,87 @@
 import { useState, useCallback, useEffect } from 'react';
-import { X, ClipboardList, BarChart2, History as HistoryIcon, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { X, ClipboardList, BarChart2, AlertTriangle, RefreshCw, Users as UsersIcon } from 'lucide-react';
 import { useClock } from './hooks/useClock';
 import SplashScreen from './components/splash/SplashScreen';
 import Header from './components/layout/Header';
 import KanbanBoard from './components/kanban/KanbanBoard';
 import Dashboard from './components/dashboard/Dashboard';
-import History from './components/history/History';
 import DemandModal from './components/modals/DemandModal';
 import { useDemands } from './hooks/useDemands';
 import { useStats } from './hooks/useStats';
 import { useWebSocket } from './hooks/useWebSocket';
+import { useColumns } from './hooks/useColumns';
+import { useAuth } from './hooks/useAuth';
+import LoginScreen from './components/auth/LoginScreen';
+import SettingsPage from './components/settings/SettingsPage';
+import ColaboradoresPage from './components/colaboradores/ColaboradoresPage';
+import { UsersProvider } from './context/UsersContext';
+import { setApiUser } from './api';
+import { getDeadlineStatus } from './utils/colors';
+import { safeIconName } from './components/ui/Icon';
 import type { Demand } from './types';
 
+// Rotas <-> abas do topo/mobile
+const VIEW_TO_PATH: Record<string, string> = {
+  kanban: '/demandas',
+  dashboard: '/dashboard',
+  colaboradores: '/colaboradores',
+};
+const PATH_TO_VIEW: Record<string, string> = {
+  '/demandas': 'kanban',
+  '/dashboard': 'dashboard',
+  '/colaboradores': 'colaboradores',
+};
+
 export default function App() {
-  const [showSplash, setShowSplash] = useState(true);
-  const [activeView, setActiveView] = useState('kanban');
   const [tvMode, setTvMode] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingDemand, setEditingDemand] = useState<Demand | null>(null);
 
-  const { demands, loading, error, fetchDemands, createDemand, updateDemand, deleteDemand, moveDemand, handleWsMessage } = useDemands();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const { demands, loading, error, fetchDemands, createDemand, updateDemand, deleteDemand, moveDemand, handleWsMessage: handleDemandWs } = useDemands();
   const { stats, refetch: refetchStats } = useStats();
+  const { columns, createColumn, updateColumn, deleteColumn, handleWsMessage: handleColumnWs } = useColumns();
+  const { user, loading: authLoading, isAuthenticated, oauthError, clearOauthError, justLoggedIn, clearJustLoggedIn, login, register, logout, updateProfile, changePassword, deleteAccount } = useAuth();
   const clock = useClock();
 
+  const activeView = PATH_TO_VIEW[location.pathname] ?? 'kanban';
+
+  // Contadores do topo derivados dos blocos reais (nome, cor, ícone e contagem
+  // por status). Assim, se um bloco chama "123", o contador do topo mostra "123".
+  const columnStats = columns.map(col => ({
+    id: col.id,
+    label: col.label,
+    color: col.color,
+    icon: safeIconName(col.icon),
+    count: demands.filter(d => d.status === col.id).length,
+  }));
+
+  // Demandas atrasadas / vencendo usadas nas notificações (sino do topo).
+  const overdueDemands = demands.filter(
+    d => !d.data_conclusao && getDeadlineStatus(d.prazo) === 'overdue'
+  );
+  const dueSoonDemands = demands.filter(
+    d => !d.data_conclusao && getDeadlineStatus(d.prazo) === 'warning'
+  );
+
+  // Modo TV / topo: só os blocos criados.
+  const tvCounters = columnStats.map(c => ({ label: c.label, value: c.count, color: c.color }));
+
   const onWsMessage = useCallback((msg: { type: string; data: unknown }) => {
-    handleWsMessage(msg);
+    handleDemandWs(msg);
+    handleColumnWs(msg);
     refetchStats();
-  }, [handleWsMessage, refetchStats]);
+  }, [handleDemandWs, handleColumnWs, refetchStats]);
 
   useWebSocket(onWsMessage);
+
+  // Atribui as ações de demandas ao colaborador logado (header X-User nos logs).
+  useEffect(() => {
+    setApiUser(user?.name);
+  }, [user?.name]);
 
   useEffect(() => {
     if (tvMode) {
@@ -48,20 +101,23 @@ export default function App() {
   }, []);
 
   const handleCreate = useCallback(() => {
+    // Não permite criar demandas se não houver nenhum bloco/coluna.
+    if (columns.length === 0) return;
     setEditingDemand(null);
     setModalOpen(true);
-  }, []);
+  }, [columns.length]);
 
   const handleDuplicate = useCallback(async (id: string) => {
     try {
       await fetch(`/api/demands/${id}/duplicate`, {
         method: 'POST',
-        headers: { 'X-User': 'Sistema' },
+        credentials: 'include',
+        headers: { 'X-User': user?.name || 'Sistema' },
       });
     } catch (err) {
       console.error('Error duplicating demand:', err);
     }
-  }, []);
+  }, [user?.name]);
 
   const handleDelete = useCallback(async (id: string) => {
     try {
@@ -76,10 +132,69 @@ export default function App() {
     setEditingDemand(null);
   }, []);
 
-  const handleSplashComplete = useCallback(() => setShowSplash(false), []);
+  // Após um login por formulário, vai para as demandas (o splash aparece antes).
+  const handleLogin = useCallback(async (email: string, password: string) => {
+    await login(email, password);
+    navigate('/demandas');
+  }, [login, navigate]);
 
-  if (showSplash) {
-    return <SplashScreen onComplete={handleSplashComplete} />;
+  // Registro NÃO autentica: a própria LoginScreen exibe o pop-up e leva ao login.
+  const handleRegister = useCallback(async (name: string, email: string, password: string, cargo?: string) => {
+    await register(name, email, password, cargo);
+  }, [register]);
+
+  const goToView = useCallback((view: string) => {
+    navigate(VIEW_TO_PATH[view] ?? '/demandas');
+  }, [navigate]);
+
+  // ── Validando sessão ────────────────────────────────────────────────────────
+  if (authLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-arka-dark">
+        <div className="relative w-14 h-14">
+          <div className="absolute inset-0 rounded-full border-4 border-arka-blue/20" />
+          <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-arka-blue animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Tela de boas-vindas: aparece logo DEPOIS de logar ───────────────────────
+  if (isAuthenticated && justLoggedIn) {
+    return <SplashScreen onComplete={clearJustLoggedIn} />;
+  }
+
+  // ── Não autenticado → rota de login ─────────────────────────────────────────
+  if (!isAuthenticated) {
+    return (
+      <Routes>
+        <Route
+          path="/login"
+          element={
+            <LoginScreen
+              mode="login"
+              onLogin={handleLogin}
+              onRegister={handleRegister}
+              oauthError={oauthError}
+              onClearOauthError={clearOauthError}
+            />
+          }
+        />
+        <Route
+          path="/cadastrar-conta"
+          element={
+            <LoginScreen
+              mode="register"
+              onLogin={handleLogin}
+              onRegister={handleRegister}
+              oauthError={oauthError}
+              onClearOauthError={clearOauthError}
+            />
+          }
+        />
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
+    );
   }
 
   // ── Tela de erro de conexão ─────────────────────────────────────────────────
@@ -116,18 +231,39 @@ export default function App() {
     );
   }
 
-  // ── Loading inicial ─────────────────────────────────────────────────────────
   const showLoading = loading && demands.length === 0;
 
+  const renderKanban = (tv: boolean) => (
+    <KanbanBoard
+      demands={demands}
+      columns={columns}
+      onMove={moveDemand}
+      onEdit={handleEdit}
+      onDuplicate={handleDuplicate}
+      onDelete={handleDelete}
+      onCreate={handleCreate}
+      onCreateColumn={createColumn}
+      onUpdateColumn={updateColumn}
+      onDeleteColumn={deleteColumn}
+      tvMode={tv}
+    />
+  );
+
   return (
+    <UsersProvider currentUserName={user?.name} currentUserRole={user?.role}>
     <div className={`h-screen flex flex-col bg-arka-dark ${tvMode ? 'tv-mode' : ''}`}>
       {!tvMode && (
         <Header
-          stats={stats}
+          columnStats={columnStats}
           tvMode={tvMode}
           onToggleTv={() => setTvMode(prev => !prev)}
           activeView={activeView}
-          onViewChange={setActiveView}
+          onViewChange={goToView}
+          overdueDemands={overdueDemands}
+          dueSoonDemands={dueSoonDemands}
+          userName={user?.name}
+          avatarUrl={user?.avatar_url}
+          onLogout={logout}
         />
       )}
 
@@ -146,17 +282,9 @@ export default function App() {
           />
 
           {/* TV Mode Stat Counters: No card bg, neon glowing numbers, straight vertical bar | separators */}
-          {stats && (
+          {tvCounters.length > 0 && (
             <div className="flex items-center justify-center flex-1 max-w-6xl mx-auto px-4">
-              {[
-                { label: 'Novas',        value: stats.novas,       color: '#0066FF' },
-                { label: 'Em andamento', value: stats.emAndamento, color: '#8B5CF6' },
-                { label: 'Aguardando',   value: stats.aguardando,  color: '#F59E0B' },
-                { label: 'Em revisão',   value: stats.emRevisao,   color: '#06B6D4' },
-                { label: 'Concluídas',   value: stats.concluidas,  color: '#22C55E' },
-                { label: 'Hoje',         value: stats.hoje,        color: '#60A5FA' },
-                { label: 'Semana',       value: stats.semana,      color: '#A78BFA' },
-              ].map((card, i, arr) => (
+              {tvCounters.map((card, i, arr) => (
                 <div key={i} className="flex items-center">
                   <div className="flex flex-col items-center justify-center text-center px-3 xl:px-5">
                     <span
@@ -200,7 +328,9 @@ export default function App() {
       )}
 
       <main className="flex-1 overflow-hidden">
-        {showLoading ? (
+        {tvMode ? (
+          renderKanban(true)
+        ) : showLoading ? (
           <div className="flex items-center justify-center h-full">
             <div className="flex flex-col items-center gap-5">
               <div className="relative w-16 h-16">
@@ -214,25 +344,24 @@ export default function App() {
             </div>
           </div>
         ) : (
-          <>
-            {(activeView === 'kanban' || tvMode) && (
-              <KanbanBoard
-                demands={demands}
-                onMove={moveDemand}
-                onEdit={handleEdit}
-                onDuplicate={handleDuplicate}
-                onDelete={handleDelete}
-                onCreate={handleCreate}
-                tvMode={tvMode}
-              />
-            )}
-            {!tvMode && activeView === 'dashboard' && (
-              <Dashboard stats={stats} />
-            )}
-            {!tvMode && activeView === 'historico' && (
-              <History stats={stats} tvMode={tvMode} />
-            )}
-          </>
+          <Routes>
+            <Route path="/demandas" element={renderKanban(false)} />
+            <Route path="/dashboard" element={<Dashboard stats={stats} />} />
+            <Route path="/colaboradores" element={<ColaboradoresPage />} />
+            <Route
+              path="/configuracoes"
+              element={
+                <SettingsPage
+                  user={user!}
+                  onUpdateProfile={updateProfile}
+                  onChangePassword={changePassword}
+                  onDeleteAccount={deleteAccount}
+                  onBack={() => navigate('/demandas')}
+                />
+              }
+            />
+            <Route path="*" element={<Navigate to="/demandas" replace />} />
+          </Routes>
         )}
       </main>
 
@@ -255,13 +384,13 @@ export default function App() {
         }}
       >
         {[
-          { id: 'kanban',    label: 'Kanban',    Icon: ClipboardList },
-          { id: 'dashboard', label: 'Dashboard', Icon: BarChart2     },
-          { id: 'historico', label: 'Histórico', Icon: HistoryIcon   },
+          { id: 'kanban',        label: 'Kanban',        Icon: ClipboardList },
+          { id: 'dashboard',     label: 'Dashboard',     Icon: BarChart2     },
+          { id: 'colaboradores', label: 'Equipe',        Icon: UsersIcon     },
         ].map(item => (
           <button
             key={item.id}
-            onClick={() => setActiveView(item.id)}
+            onClick={() => goToView(item.id)}
             className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all ${
               activeView === item.id ? 'text-arka-blue' : 'text-white/40'
             }`}
@@ -272,5 +401,6 @@ export default function App() {
         ))}
       </nav>
     </div>
+    </UsersProvider>
   );
 }

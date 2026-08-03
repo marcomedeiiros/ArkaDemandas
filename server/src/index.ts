@@ -1,3 +1,7 @@
+// Carrega variáveis de ambiente de um arquivo .env (opcional), usado para as
+// credenciais de OAuth (Google/Microsoft). Nativo do Node, sem dependências.
+try { (process as any).loadEnvFile?.(); } catch { /* .env é opcional */ }
+
 import express from 'express';
 import cors from 'cors';
 import { WebSocketServer } from 'ws';
@@ -6,6 +10,9 @@ import demandRoutes from './routes/demand.routes.js';
 import statsRoutes from './routes/stats.routes.js';
 import logsRoutes from './routes/logs.routes.js';
 import exportRoutes from './routes/export.js';
+import columnRoutes from './routes/column.routes.js';
+import authRoutes from './routes/auth.routes.js';
+import { requireAuth } from './auth/middleware.js';
 
 import { setWebSocketServer } from './websocket.js';
 
@@ -13,7 +20,10 @@ const PORT = 3001;
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', // URL do cliente Vite
+  credentials: true, // Permite enviar cookies entre cliente e servidor
+}));
 app.use(express.json());
 
 // Request logging
@@ -22,11 +32,16 @@ app.use((req, _res, next) => {
   next();
 });
 
-// Routes
-app.use('/api/demands', demandRoutes);
-app.use('/api/stats', statsRoutes);
-app.use('/api/logs', logsRoutes);
-app.use('/api/export', exportRoutes);
+// Rotas de autenticação (públicas login/registro/oauth)
+app.use('/api/auth', authRoutes);
+
+// Rotas de dados exigem sessão válida (cookie)
+app.use('/api/demands', requireAuth, demandRoutes);
+app.use('/api/stats', requireAuth, statsRoutes);
+app.use('/api/logs', requireAuth, logsRoutes);
+app.use('/api/export', requireAuth, exportRoutes);
+app.use('/api/columns', requireAuth, columnRoutes);
+
 
 // Health check
 app.get('/api/health', (_req, res) => {

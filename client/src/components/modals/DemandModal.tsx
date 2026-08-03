@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import {
   Pencil, FilePlus, X, Timer, Calendar as CalendarIcon,
-  CheckCircle2, Trash2, Save, Monitor, Building2, User,
+  CheckCircle2, Trash2, Save, Monitor, Building2,
   Folder, Target, Clock, FileText,
 } from 'lucide-react';
-import type { Demand, CreateDemandDTO } from '../../types';
-import { PRIORITIES } from '../../types';
-import { formatDate, getTimeOpen } from '../../utils/dates';
+import type { Demand, CreateDemandDTO, ActivityLog } from '../../types';
+import { PRIORITIES, ACTION_LABELS } from '../../types';
+import { formatDate, getTimeOpen, formatDateTime } from '../../utils/dates';
+import { getActionColor } from '../../utils/colors';
 
 interface DemandModalProps {
   open: boolean;
@@ -55,20 +56,33 @@ export default function DemandModal({
   open, onClose, demand, onSave, onUpdate, onDelete,
 }: DemandModalProps) {
   const [form, setForm] = useState<CreateDemandDTO>({
-    titulo: '', descricao: '', cliente: '', responsavel: '',
+    titulo: '', descricao: '', cliente: '',
     categoria: '', prioridade: 'Média', prazo: '',
   });
   const [saving, setSaving] = useState(false);
+  const [history, setHistory] = useState<ActivityLog[]>([]);
+
+  // Histórico desta demanda (linha do tempo do que aconteceu com ela).
+  useEffect(() => {
+    if (open && demand) {
+      fetch(`/api/logs/demand/${demand.id}`)
+        .then(r => (r.ok ? r.json() : []))
+        .then(setHistory)
+        .catch(() => setHistory([]));
+    } else {
+      setHistory([]);
+    }
+  }, [open, demand]);
 
   useEffect(() => {
     if (demand) {
       setForm({
         titulo: demand.titulo, descricao: demand.descricao, cliente: demand.cliente,
-        responsavel: demand.responsavel, categoria: demand.categoria,
+        categoria: demand.categoria,
         prioridade: demand.prioridade, prazo: demand.prazo ?? '',
       });
     } else {
-      setForm({ titulo: '', descricao: '', cliente: '', responsavel: '',
+      setForm({ titulo: '', descricao: '', cliente: '',
         categoria: '', prioridade: 'Média', prazo: '' });
     }
   }, [demand, open]);
@@ -216,12 +230,6 @@ export default function DemandModal({
               required placeholder="Nome do cliente"
             />
             <Field
-              label="Responsável"
-              icon={<User size={13} style={{ color: 'rgba(255,255,255,0.45)' }} />}
-              value={form.responsavel} onChange={v => update('responsavel', v)}
-              required placeholder="Técnico responsável"
-            />
-            <Field
               label="Categoria"
               icon={<Folder size={13} style={{ color: 'rgba(255,255,255,0.45)' }} />}
               value={form.categoria} onChange={v => update('categoria', v)}
@@ -288,7 +296,40 @@ export default function DemandModal({
             />
           </div>
 
-
+          {/* ── Histórico desta demanda (modo edição) ── */}
+          {demand && (
+            <div>
+              <label className="field-label flex items-center gap-1.5">
+                <Clock size={13} style={{ color: 'rgba(255,255,255,0.45)' }} />
+                Histórico desta demanda
+              </label>
+              <div
+                className="rounded-xl p-3 mt-1 max-h-52 overflow-y-auto flex flex-col gap-2.5"
+                style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                {history.length === 0 ? (
+                  <p className="text-xs text-center py-3" style={{ color: 'rgba(255,255,255,0.3)' }}>Sem registros ainda.</p>
+                ) : history.map(log => {
+                  const color = getActionColor(log.action);
+                  return (
+                    <div key={log.id} className="flex items-start gap-2.5">
+                      <span className="mt-1.5 w-2 h-2 rounded-full shrink-0" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-bold px-1.5 py-0.5 rounded-full" style={{ fontSize: '0.62rem', background: `${color}20`, color, border: `1px solid ${color}45` }}>
+                            {ACTION_LABELS[log.action] ?? log.action}
+                          </span>
+                          {log.user && <span className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.55)' }}>{log.user}</span>}
+                          <span className="ml-auto" style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.3)' }}>{formatDateTime(log.created_at)}</span>
+                        </div>
+                        <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.6)' }}>{log.details}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ── Actions ── */}
           <div

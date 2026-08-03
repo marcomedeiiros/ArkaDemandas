@@ -68,6 +68,7 @@ export default {
         'bar-grow':         'barGrow 0.8s cubic-bezier(0.16,1,0.3,1) forwards',
         'number-count':     'numberCount 0.6s ease-out forwards',
         'border-flow':      'borderFlow 3s linear infinite',
+        'grid-pan':         'gridPan 24s linear infinite',
       },
       keyframes: {
         fadeIn:       { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
@@ -88,6 +89,7 @@ export default {
         barGrow:      { '0%': { transform: 'scaleY(0)', transformOrigin: 'bottom' }, '100%': { transform: 'scaleY(1)', transformOrigin: 'bottom' } },
         numberCount:  { '0%': { opacity: '0', transform: 'translateY(8px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
         borderFlow:   { '0%': { backgroundPosition: '0% 50%' }, '100%': { backgroundPosition: '100% 50%' } },
+        gridPan:      { '0%': { backgroundPosition: '0px 0px' }, '100%': { backgroundPosition: '56px 56px' } },
         scaleIn:      { '0%': { opacity: '0', transform: 'scale(0.92)' }, '100%': { opacity: '1', transform: 'scale(1)' } },
       },
       borderRadius: {

@@ -38,10 +38,19 @@ export class DemandRepository {
     const now = new Date().toISOString();
     const dataCriacao = new Date().toISOString().split('T')[0];
 
+    // A nova demanda entra na primeira coluna existente (menor order_index).
+    // Antes o status era fixo em 'novas', o que fazia a demanda "sumir" quando
+    // esse bloco tinha sido renomeado ou excluído (nenhuma coluna correspondia
+    // ao status, então a demanda não aparecia em lugar nenhum).
+    const firstColumn = queryOne<{ id: string }>(
+      'SELECT id FROM columns ORDER BY order_index ASC LIMIT 1'
+    );
+    const status = firstColumn?.id ?? 'novas';
+
     run(
       `INSERT INTO demands (
-        id, titulo, descricao, cliente, responsavel, categoria, 
-        prioridade, status, data_criacao, prazo, observacoes, 
+        id, titulo, descricao, cliente, responsavel, categoria,
+        prioridade, status, data_criacao, prazo, observacoes,
         criado_por, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -52,10 +61,10 @@ export class DemandRepository {
         data.responsavel,
         data.categoria,
         data.prioridade,
-        'novas',
+        status,
         dataCriacao,
         data.prazo || null,
-        data.observacoes || '',
+        '',
         data.criado_por,
         now,
         now,
@@ -104,10 +113,6 @@ export class DemandRepository {
       updates.push('prazo = ?');
       values.push(data.prazo);
     }
-    if (data.observacoes !== undefined) {
-      updates.push('observacoes = ?');
-      values.push(data.observacoes);
-    }
     if (data.data_conclusao !== undefined) {
       updates.push('data_conclusao = ?');
       values.push(data.data_conclusao);
@@ -155,11 +160,11 @@ export class DemandRepository {
       titulo: `${original.titulo} (Cópia)`,
       descricao: original.descricao,
       cliente: original.cliente,
-      responsavel: original.responsavel,
+      // Quem duplica vira o responsável e o dono da cópia (mesma pessoa).
+      responsavel: criado_por,
       categoria: original.categoria,
       prioridade: original.prioridade,
       prazo: original.prazo,
-      observacoes: original.observacoes,
       criado_por,
     };
 

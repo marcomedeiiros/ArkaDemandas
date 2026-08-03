@@ -10,10 +10,7 @@ import {
   ChartCard,
   StatusDoughnutChart,
   CreatedPerDayChart,
-  CreatedPerWeekChart,
-  CreatedPerMonthChart,
   CompletionGaugeChart,
-  EvolutionChart,
   ComparisonChart,
 } from './ChartComponents';
 
@@ -73,15 +70,13 @@ export default function Dashboard({ stats }: DashboardProps) {
   );
 
   // Top Minimalist Stat Cards (No icons, Big number on top, text below)
+  // Um card por bloco/coluna real (nome, cor e contagem vindos do servidor,
+  // já respeitando o filtro de período) + Hoje / Semana / Total.
   const topCards = [
-    { label: 'Novas',             value: S.novas,       color: '#0066FF' },
-    { label: 'Em andamento',      value: S.emAndamento, color: '#8B5CF6' },
-    { label: 'Aguardando',        value: S.aguardando,  color: '#F59E0B' },
-    { label: 'Em revisão',        value: S.emRevisao,   color: '#06B6D4' },
-    { label: 'Concluídas',        value: S.concluidas,  color: '#22C55E' },
-    { label: 'Hoje',              value: S.hoje,        color: '#60A5FA' },
-    { label: 'Semana',            value: S.semana,      color: '#A78BFA' },
-    { label: 'Total de demandas', value: S.total,       color: '#F43F5E' },
+    ...S.porStatus.map(s => ({ label: s.label, value: s.count, color: s.color })),
+    { label: 'Hoje',              value: S.hoje,   color: '#60A5FA' },
+    { label: 'Semana',            value: S.semana, color: '#A78BFA' },
+    { label: 'Total de demandas', value: S.total,  color: '#F43F5E' },
   ];
 
   return (
@@ -234,47 +229,24 @@ export default function Dashboard({ stats }: DashboardProps) {
           </div>
         </div>
 
-        {/* ── Main Chart Grid ── */}
+        {/* ── Gráficos principais (enxutos) ── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          {/* Chart 1: Demandas por Status (Doughnut) */}
-          <ChartCard title="Demandas por Status" subtitle="Distribuição por etapa do Help Desk">
+          <ChartCard title="Demandas por Status" subtitle="Distribuição por bloco">
             <StatusDoughnutChart data={S.porStatus} />
           </ChartCard>
 
-          {/* Chart 2: Demandas Criadas por Dia (Line Chart) */}
           <ChartCard title="Demandas Criadas por Dia" subtitle="Histórico dos últimos 30 dias">
             <CreatedPerDayChart data={S.criadasPorDia} />
           </ChartCard>
 
-          {/* Chart 3: Taxa de Conclusão (Gauge Chart) */}
           <ChartCard title="Taxa de Conclusão" subtitle="Proporção de chamados resolvidos">
             <CompletionGaugeChart rate={S.taxaConclusao} concluidas={S.concluidas} total={S.total} />
           </ChartCard>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Chart 4: Demandas Criadas por Semana (Bar Chart) */}
-          <ChartCard title="Demandas Criadas por Semana" subtitle="Volume nas últimas 8 semanas">
-            <CreatedPerWeekChart data={S.criadasPorSemana} />
-          </ChartCard>
-
-          {/* Chart 5: Demandas Criadas por Mês (Bar Chart) */}
-          <ChartCard title="Demandas Criadas por Mês" subtitle="Comparativo mensal">
-            <CreatedPerMonthChart data={S.criadasPorMes} />
-          </ChartCard>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Chart 6: Evolução das Demandas (Acumulado) */}
-          <ChartCard title="Evolução das Demandas" subtitle="Acumulado vs. novas entradas">
-            <EvolutionChart data={S.evolucaoDemandas} />
-          </ChartCard>
-
-          {/* Chart 7: Comparativo Abertas x Concluídas */}
-          <ChartCard title="Comparativo Abertas vs. Concluídas" subtitle="Desempenho diário de fechamento">
-            <ComparisonChart data={S.comparativoAbertasConcluidas} />
-          </ChartCard>
-        </div>
+        <ChartCard title="Comparativo Abertas vs. Concluídas" subtitle="Desempenho diário de fechamento">
+          <ComparisonChart data={S.comparativoAbertasConcluidas} />
+        </ChartCard>
 
       </div>
     </div>

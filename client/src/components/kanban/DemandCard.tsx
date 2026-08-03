@@ -3,6 +3,8 @@ import type { Demand } from '../../types';
 import { getPriorityColor, getPriorityLabel, getDeadlineStatus } from '../../utils/colors';
 import { formatDate, getTimeOpen, getTimeOpenLabel } from '../../utils/dates';
 import { Icon } from '../ui/Icon';
+import { Avatar } from '../ui/Avatar';
+import { useUserByName, useCurrentUserName, useIsAdmin } from '../../context/UsersContext';
 
 interface DemandCardProps {
   demand: Demand;
@@ -10,23 +12,36 @@ interface DemandCardProps {
   onDuplicate: (id: string) => void;
   onDelete: (id: string) => void;
   tvMode?: boolean;
+  /** Nome do bloco/coluna atual da demanda (exibido no selo) */
+  statusLabel?: string;
+  /** Cor do bloco/coluna atual (usada no selo) */
+  statusColor?: string;
 }
 
-export default function DemandCard({ demand, onEdit, onDuplicate, onDelete, tvMode }: DemandCardProps) {
+export default function DemandCard({ demand, onEdit, onDuplicate, onDelete, tvMode, statusLabel, statusColor }: DemandCardProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // SLA de prazo demanda concluída (com data_conclusao) não conta como atrasada.
+  const concluida = Boolean(demand.data_conclusao);
   const deadlineStatus = getDeadlineStatus(demand.prazo);
-  const isOverdue = deadlineStatus === 'overdue' && demand.status !== 'concluidas';
-  const isWarning = deadlineStatus === 'warning' && demand.status !== 'concluidas';
+  const isOverdue = deadlineStatus === 'overdue' && !concluida;
+  const isWarning = deadlineStatus === 'warning' && !concluida;
   const priorityColor = getPriorityColor(demand.prioridade);
   const priorityLabel = getPriorityLabel(demand.prioridade);
 
-  const deadlineIndicator = demand.prazo
-    ? isOverdue ? { icon: 'alertTriangle' as const, label: 'Vencida', color: '#F87171' }
-    : isWarning ? { icon: 'clock' as const, label: 'Próx. vencimento', color: '#FCD34D' }
-    : { icon: 'checkCircle' as const, label: 'No prazo', color: '#4ADE80' }
+  // O selo mostra o bloco/coluna atual da demanda (ex.: A FAZER, ATRASADO).
+  const statusBadge = statusLabel
+    ? { label: statusLabel, color: statusColor || '#4D94FF' }
     : null;
+
+  // Foto de perfil do responsável (quem criou a demanda), buscada pelo nome.
+  const responsavelUser = useUserByName(demand.responsavel);
+
+  // Pode gerenciar (editar/duplicar/excluir): o criador OU um admin/supervisor.
+  const currentUserName = useCurrentUserName();
+  const isAdmin = useIsAdmin();
+  const canManage = isAdmin || Boolean(currentUserName && demand.criado_por === currentUserName);
 
   const cardBg = isOverdue
     ? 'rgba(239,68,68,0.05)'
@@ -121,7 +136,7 @@ export default function DemandCard({ demand, onEdit, onDuplicate, onDelete, tvMo
               {priorityLabel}
             </span>
 
-            {!tvMode && (
+            {!tvMode && canManage && (
               <div className="relative" ref={menuRef}>
                 <button
                   onClick={(e) => {
@@ -177,18 +192,18 @@ export default function DemandCard({ demand, onEdit, onDuplicate, onDelete, tvMo
         </div>
 
         <div
-          className="font-semibold text-white leading-snug mb-1.5 cursor-pointer"
+          className={`font-semibold text-white leading-snug mb-1.5 ${canManage ? 'cursor-pointer' : ''}`}
           style={{ fontSize: fs.title }}
-          onClick={() => onEdit(demand)}
+          onClick={canManage ? () => onEdit(demand) : undefined}
         >
           {demand.titulo}
         </div>
 
         {demand.descricao && (
           <p
-            className="line-clamp-2 text-xs font-normal mb-3 cursor-pointer leading-relaxed"
+            className={`line-clamp-2 text-xs font-normal mb-3 leading-relaxed ${canManage ? 'cursor-pointer' : ''}`}
             style={{ color: 'rgba(255,255,255,0.6)' }}
-            onClick={() => onEdit(demand)}
+            onClick={canManage ? () => onEdit(demand) : undefined}
           >
             {demand.descricao}
           </p>
@@ -206,7 +221,7 @@ export default function DemandCard({ demand, onEdit, onDuplicate, onDelete, tvMo
           </div>
 
           <div className="flex items-center gap-2">
-            <Icon name="user" size={tvMode ? 15 : 14} style={{ color: 'rgba(255,255,255,0.4)', flexShrink: 0 }} />
+            <Avatar name={demand.responsavel} src={responsavelUser?.avatar_url} size={tvMode ? 22 : 20} />
             <span
               className="truncate"
               style={{ fontSize: fs.meta, color: 'rgba(255,255,255,0.55)' }}
@@ -248,8 +263,18 @@ export default function DemandCard({ demand, onEdit, onDuplicate, onDelete, tvMo
                 color: isOverdue ? '#F87171' : isWarning ? '#FCD34D' : 'rgba(255,255,255,0.35)',
               }}
             >
-              <Icon name="clock" size={12} />
+              <Icon name={isOverdue ? 'alertTriangle' : 'clock'} size={12} />
               <span>{formatDate(demand.prazo)}</span>
+              {isOverdue && (
+                <span className="font-bold px-1.5 py-0.5 rounded-full" style={{ fontSize: '0.6rem', background: 'rgba(239,68,68,0.18)', color: '#F87171', border: '1px solid rgba(239,68,68,0.4)' }}>
+                  ATRASADA
+                </span>
+              )}
+              {isWarning && (
+                <span className="font-bold px-1.5 py-0.5 rounded-full" style={{ fontSize: '0.6rem', background: 'rgba(234,179,8,0.18)', color: '#FCD34D', border: '1px solid rgba(234,179,8,0.4)' }}>
+                  VENCE
+                </span>
+              )}
             </div>
           ) : (
             <div
@@ -269,13 +294,20 @@ export default function DemandCard({ demand, onEdit, onDuplicate, onDelete, tvMo
             {getTimeOpen(demand.data_criacao, demand.data_conclusao)}
           </span>
 
-          {deadlineIndicator && (
+          {statusBadge && (
             <span
-              className="flex items-center gap-1 font-semibold"
-              style={{ fontSize: fs.foot, color: deadlineIndicator.color }}
+              className="flex items-center gap-1 font-bold rounded-full"
+              style={{
+                fontSize: fs.foot,
+                color: '#FFFFFF',
+                background: `${statusBadge.color}25`,
+                border: `1px solid ${statusBadge.color}55`,
+                boxShadow: `0 0 8px ${statusBadge.color}40`,
+                padding: '2px 9px',
+                letterSpacing: '0.02em',
+              }}
             >
-              <Icon name={deadlineIndicator.icon} size={12} />
-              {deadlineIndicator.label}
+              {statusBadge.label}
             </span>
           )}
         </div>
